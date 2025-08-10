@@ -68,22 +68,22 @@ function newEmptyLesson(dateStr: string, themeLabel: string) {
     parts: {
       part1: {
         title: "Part 1｜語彙チェック（英単語→日本語訳, 8問）",
-        instructions: "英単語の日本語訳を入力しましょう。",
+        instructions: "英単語の日本語訳を入力しましょう",
         items: Array.from({ length: 8 }).map((_, i) => ({ id: `p1-${i + 1}`, term: "", answerJP: "" })),
       },
       part2: {
         title: "Part 2｜構文トレーニング（穴埋め + 日本語訳, 5問）",
-        instructions: "語彙を使って英文を完成させ、日本語訳も書きましょう。",
+        instructions: "語彙を使って英文を完成させ、日本語訳も書きましょう",
         items: Array.from({ length: 5 }).map((_, i) => ({ id: `p2-${i + 1}`, prompt: "", userEN: "", userJP: "" })),
       },
       part3: {
         title: "Part 3｜会話ロールプレイ（4問）",
-        instructions: 日本語のセリフを英訳しましょう。",
+        instructions: 日本語のセリフを英訳しましょう",
         items: Array.from({ length: 4 }).map((_, i) => ({ id: `p3-${i + 1}`, scene: "", masayukiJP: "", masayukiEN: "" })),
       },
       part4: {
         title: "Part 4｜英作文",
-        instructions: "今日のテーマに沿って自由に英作文しましょう。",
+        instructions: "今日のテーマに沿って自由に英作文しましょう",
         content: "",
       },
     },
