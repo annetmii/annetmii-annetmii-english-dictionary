@@ -721,9 +721,9 @@ function DayThemeEditor({
   return (
     <div className="rounded-2xl border bg-white">
       <div className="p-4 border-b">
-        <h3 className="text-lg font-semibold">今日のテーマ（自由記入）</h3>
+        <h3 className="text-lg font-semibold">今日のテーマ</h3>
         <p className="text-xs text-gray-500 mt-1">
-          曜日テーマ：{weekdayLabel}／必要なら今日の狙いや具体的トピックを記入
+          曜日テーマ：{weekdayLabel}
         </p>
       </div>
       <div className="p-4">
