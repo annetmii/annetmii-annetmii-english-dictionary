@@ -281,6 +281,31 @@ export default function Page() {
             <input type="file" accept="application/json" className="hidden" onChange={importJSON} />
             <span className="inline-flex items-center gap-1 border rounded-md px-3 py-1 text-sm cursor-pointer">
               データ読み込み
+              {mode === "trainer" && (
+  <div className="flex flex-wrap items-center gap-2 pb-2 mt-2">
+    <Button
+      size="sm"
+      variant={editMode ? "default" : "outline"}
+      onClick={() => setEditMode(!editMode)}
+    >
+      {editMode ? "編集モード：ON" : "編集モード：OFF"}
+    </Button>
+
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => { setPinMode("change"); setPinModalOpen(true); }}
+    >
+      PIN変更
+    </Button>
+
+    {currentLesson && (
+      <Button size="sm" variant="outline" onClick={removeLesson}>
+        このレッスンを削除
+      </Button>
+    )}
+  </div>
+)}
             </span>
           </label>
         </div>
@@ -343,6 +368,7 @@ export default function Page() {
                   if (!pinInput) return setPinError("PINを入力してください。");
                   if (pinInput !== current) return setPinError("PINが違います。");
                   setMode("trainer");
+                  setEditMode(true);
                   setPinModalOpen(false);
                   return;
                 }
@@ -352,6 +378,7 @@ export default function Page() {
                   if (pinInput !== pinConfirm) return setPinError("確認用PINが一致しません。");
                   setPin(pinInput);
                   setMode("trainer");
+                  setEditMode(true);
                   setPinModalOpen(false);
                   return;
                 }
