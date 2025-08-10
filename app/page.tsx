@@ -63,6 +63,7 @@ function newEmptyLesson(dateStr: string, themeLabel: string) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: "draft" as "draft" | "submitted" | "returned" | "confirmed",
+      customTheme: "",
     },
     parts: {
       part1: {
@@ -405,6 +406,16 @@ export default function Page() {
         <div className="space-y-4">
           <LessonMetaBar currentLesson={currentLesson} onStatusChange={setStatus} mode={mode} />
 
+          <DayThemeEditor
+  value={currentLesson.meta?.customTheme || ""}
+  editable={mode === "trainer" && editMode}
+  weekdayLabel={theme.label}
+  onChange={(v) =>
+    saveLesson({
+      meta: { ...(currentLesson.meta || {}), customTheme: v },
+    })
+  }
+/>
           <SectionPart1
             data={currentLesson.parts.part1}
             disabled={disabledForLearner}
@@ -691,6 +702,38 @@ function BottomActions({ mode, lesson, onSubmit, onReopen, onReturn, onConfirm }
             {mode === "learner" && status === "returned" && (<Button onClick={onConfirm}>確認済みにする</Button>)}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function DayThemeEditor({
+  value,
+  editable,
+  onChange,
+  weekdayLabel,
+}: {
+  value: string;
+  editable: boolean;
+  onChange: (v: string) => void;
+  weekdayLabel: string;
+}) {
+  return (
+    <div className="rounded-2xl border bg-white">
+      <div className="p-4 border-b">
+        <h3 className="text-lg font-semibold">今日のテーマ（自由記入）</h3>
+        <p className="text-xs text-gray-500 mt-1">
+          曜日テーマ：{weekdayLabel}／必要なら今日の狙いや具体的トピックを記入
+        </p>
+      </div>
+      <div className="p-4">
+        <Textarea
+          value={value}
+          disabled={!editable}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="例）面接日の再調整メール／候補者への日程提案フレーズ／謝罪＋代替案"
+          className="min-h-[80px]"
+        />
       </div>
     </div>
   );
