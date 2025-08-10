@@ -1,3 +1,4 @@
+"use client";
 import * as React from "react";
 export function Dialog({ open, onOpenChange, children }: { open:boolean; onOpenChange:(v:boolean)=>void; children: React.ReactNode }) {
   React.useEffect(()=>{ function onKey(e:KeyboardEvent){ if(e.key==="Escape") onOpenChange(false);} window.addEventListener("keydown", onKey); return ()=>window.removeEventListener("keydown", onKey); },[onOpenChange]);
