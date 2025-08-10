@@ -1,3 +1,4 @@
+"use client";
 import * as React from "react";
 export function DropdownMenu({ children }: { children: React.ReactNode }) { return <div className="relative inline-block">{children}</div>; }
 export function DropdownMenuTrigger({ asChild=false, children }: any) { return children; }
