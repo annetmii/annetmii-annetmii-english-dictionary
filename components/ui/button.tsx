@@ -1,3 +1,4 @@
+"use client";
 import * as React from "react";
 import { clsx } from "clsx";
 export const Button = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "default"|"outline"|"ghost", size?: "sm"|"md"|"lg" }>(
