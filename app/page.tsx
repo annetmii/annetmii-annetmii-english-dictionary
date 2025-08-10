@@ -78,7 +78,7 @@ function newEmptyLesson(dateStr: string, themeLabel: string) {
       },
       part3: {
         title: "Part 3｜会話ロールプレイ（4問）",
-        instructions: 日本語のセリフを英訳しましょう",
+        instructions: "日本語のセリフを英訳しましょう",
         items: Array.from({ length: 4 }).map((_, i) => ({ id: `p3-${i + 1}`, scene: "", masayukiJP: "", masayukiEN: "" })),
       },
       part4: {
