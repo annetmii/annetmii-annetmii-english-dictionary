@@ -1,3 +1,4 @@
+"use client";
 import * as React from "react";
 type Props = { checked?: boolean; onCheckedChange?: (v:boolean)=>void; className?: string };
 export function Switch({ checked=false, onCheckedChange, className }: Props) {
