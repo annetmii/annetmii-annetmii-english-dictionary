@@ -61,6 +61,7 @@ function newEmptyLesson(dateStr: string, themeLabel: string) {
       part1: {
         title: "Part 1｜語彙チェック（英単語→日本語訳, 8問）",
         instructions: "英単語の日本語訳を入力しましょう。",
+        // colorJP は最初は無くてもOK（後で付与される）。既存JSON互換のためこのまま。
         items: Array.from({ length: 8 }).map((_, i) => ({ id: `p1-${i + 1}`, term: "", answerJP: "" })),
       },
       part2: {
@@ -582,11 +583,25 @@ function SectionPart1({ data, onChange, disabled, editMode }: { data: any; onCha
                 disabled={disabled}
                 onChange={(e) => updateItem(i, { answerJP: e.target.value })}
                 placeholder="日本語訳を入力"
+                className={
+                  (it.colorJP === "green" ? "bg-green-100 " :
+                   it.colorJP === "orange" ? "bg-orange-100 " :
+                   it.colorJP === "red" ? "bg-red-100 " : "") + ""
+                }
               />
               {editMode && (
-                <div className="sm:col-span-2 flex justify-end">
-                  <Button onClick={() => removeItem(i)}>削除</Button>
-                </div>
+                <>
+                  <div className="sm:col-span-2 flex items-center gap-1">
+                    <span className="text-xs text-gray-600">評価：</span>
+                    <Button size="sm" className="bg-green-200 hover:bg-green-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "green" })}>正解</Button>
+                    <Button size="sm" className="bg-orange-200 hover:bg-orange-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "orange" })}>惜しい！</Button>
+                    <Button size="sm" className="bg-red-200 hover:bg-red-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "red" })}>間違い</Button>
+                    <Button size="sm" variant="outline" onClick={() => updateItem(i, { colorJP: "" })}>クリア</Button>
+                  </div>
+                  <div className="sm:col-span-2 flex justify-end">
+                    <Button onClick={() => removeItem(i)}>削除</Button>
+                  </div>
+                </>
               )}
             </div>
           ))}
@@ -640,18 +655,46 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
                   disabled={disabled}
                   onChange={(e) => updateItem(i, { userEN: e.target.value })}
                   placeholder="英語の解答（穴埋め文）"
+                  className={
+                    (it.colorEN === "green" ? "bg-green-100 " :
+                     it.colorEN === "orange" ? "bg-orange-100 " :
+                     it.colorEN === "red" ? "bg-red-100 " : "") + ""
+                  }
                 />
                 <Input
                   value={it.userJP}
                   disabled={disabled}
                   onChange={(e) => updateItem(i, { userJP: e.target.value })}
                   placeholder="日本語訳"
+                  className={
+                    (it.colorJP === "green" ? "bg-green-100 " :
+                     it.colorJP === "orange" ? "bg-orange-100 " :
+                     it.colorJP === "red" ? "bg-red-100 " : "") + ""
+                  }
                 />
               </div>
               {editMode && (
-                <div className="flex justify-end">
-                  <Button onClick={() => removeItem(i)}>削除</Button>
-                </div>
+                <>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <span>EN評価：</span>
+                      <Button size="sm" className="bg-green-200 hover:bg-green-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "green" })}>正解</Button>
+                      <Button size="sm" className="bg-orange-200 hover:bg-orange-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "orange" })}>惜しい！</Button>
+                      <Button size="sm" className="bg-red-200 hover:bg-red-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "red" })}>間違い</Button>
+                      <Button size="sm" variant="outline" onClick={() => updateItem(i, { colorEN: "" })}>クリア</Button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span>JP評価：</span>
+                      <Button size="sm" className="bg-green-200 hover:bg-green-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "green" })}>正解</Button>
+                      <Button size="sm" className="bg-orange-200 hover:bg-orange-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "orange" })}>惜しい！</Button>
+                      <Button size="sm" className="bg-red-200 hover:bg-red-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "red" })}>間違い</Button>
+                      <Button size="sm" variant="outline" onClick={() => updateItem(i, { colorJP: "" })}>クリア</Button>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={() => removeItem(i)}>削除</Button>
+                  </div>
+                </>
               )}
             </div>
           ))}
@@ -713,12 +756,26 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
                   disabled={disabled}
                   onChange={(e) => updateItem(i, { masayukiEN: e.target.value })}
                   placeholder="↑の英訳を入力"
+                  className={
+                    (it.colorEN === "green" ? "bg-green-100 " :
+                     it.colorEN === "orange" ? "bg-orange-100 " :
+                     it.colorEN === "red" ? "bg-red-100 " : "") + ""
+                  }
                 />
               </div>
               {editMode && (
-                <div className="flex justify-end">
-                  <Button onClick={() => removeItem(i)}>削除</Button>
-                </div>
+                <>
+                  <div className="flex items-center gap-1 text-xs text-gray-600">
+                    <span>EN評価：</span>
+                    <Button size="sm" className="bg-green-200 hover:bg-green-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "green" })}>正解</Button>
+                    <Button size="sm" className="bg-orange-200 hover:bg-orange-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "orange" })}>惜しい！</Button>
+                    <Button size="sm" className="bg-red-200 hover:bg-red-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "red" })}>間違い</Button>
+                    <Button size="sm" variant="outline" onClick={() => updateItem(i, { colorEN: "" })}>クリア</Button>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={() => removeItem(i)}>削除</Button>
+                  </div>
+                </>
               )}
             </div>
           ))}
@@ -755,19 +812,62 @@ function SectionPart4({ data, onChange, disabled }: { data: any; onChange: (d: a
 
 function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: any) => void; mode: "learner" | "trainer" }) {
   const canEdit = mode === "trainer";
+  // 見た目だけ赤/黒を切替（JSON保存はしない）
+  const [commentColor, setCommentColor] = useState<"black" | "red">("black");
+  const colorClass = commentColor === "red" ? "text-red-600" : "text-gray-900";
+
   return (
     <div className="rounded-2xl border bg-white">
       <div className="p-4 border-b">
         <h3 className="text-lg font-semibold">Trainer Feedback（講師コメント）</h3>
       </div>
       <div className="p-4 space-y-3">
+        {canEdit && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-gray-600">文字色：</span>
+            <Button size="sm" variant={commentColor === "black" ? "default" : "outline"} onClick={() => setCommentColor("black")}>黒文字</Button>
+            <Button size="sm" variant={commentColor === "red" ? "default" : "outline"} onClick={() => setCommentColor("red")}>赤文字</Button>
+            <span className="text-gray-400">（※色は見た目のみ。データには保存されません）</span>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <Textarea value={data.part1} onChange={(e) => onChange({ ...data, part1: e.target.value })} disabled={!canEdit} placeholder="Part 1へのコメント" />
-          <Textarea value={data.part2} onChange={(e) => onChange({ ...data, part2: e.target.value })} disabled={!canEdit} placeholder="Part 2へのコメント" />
-          <Textarea value={data.part3} onChange={(e) => onChange({ ...data, part3: e.target.value })} disabled={!canEdit} placeholder="Part 3へのコメント" />
-          <Textarea value={data.part4} onChange={(e) => onChange({ ...data, part4: e.target.value })} disabled={!canEdit} placeholder="Part 4へのコメント" />
+          <Textarea
+            value={data.part1}
+            onChange={(e) => onChange({ ...data, part1: e.target.value })}
+            disabled={!canEdit}
+            placeholder="Part 1へのコメント"
+            className={colorClass}
+          />
+          <Textarea
+            value={data.part2}
+            onChange={(e) => onChange({ ...data, part2: e.target.value })}
+            disabled={!canEdit}
+            placeholder="Part 2へのコメント"
+            className={colorClass}
+          />
+          <Textarea
+            value={data.part3}
+            onChange={(e) => onChange({ ...data, part3: e.target.value })}
+            disabled={!canEdit}
+            placeholder="Part 3へのコメント"
+            className={colorClass}
+          />
+          <Textarea
+            value={data.part4}
+            onChange={(e) => onChange({ ...data, part4: e.target.value })}
+            disabled={!canEdit}
+            placeholder="Part 4へのコメント"
+            className={colorClass}
+          />
         </div>
-        <Textarea value={data.overall} onChange={(e) => onChange({ ...data, overall: e.target.value })} disabled={!canEdit} placeholder="総評（全体へのフィードバック）" className="min-h-[100px]" />
+        <Textarea
+          value={data.overall}
+          onChange={(e) => onChange({ ...data, overall: e.target.value })}
+          disabled={!canEdit}
+          placeholder="総評（全体へのフィードバック）"
+          className={`min-h-[100px] ${colorClass}`}
+        />
       </div>
     </div>
   );
