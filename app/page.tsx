@@ -835,28 +835,28 @@ function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: an
           <Textarea
             value={data.part1}
             onChange={(e) => onChange({ ...data, part1: e.target.value })}
-            disabled={!canEdit}
+            readOnly={!canEdit}
             placeholder="Part 1へのコメント"
             className={colorClass}
           />
           <Textarea
             value={data.part2}
             onChange={(e) => onChange({ ...data, part2: e.target.value })}
-            disabled={!canEdit}
+            readOnly={!canEdit}
             placeholder="Part 2へのコメント"
             className={colorClass}
           />
           <Textarea
             value={data.part3}
             onChange={(e) => onChange({ ...data, part3: e.target.value })}
-            disabled={!canEdit}
+            readOnly={!canEdit}
             placeholder="Part 3へのコメント"
             className={colorClass}
           />
           <Textarea
             value={data.part4}
             onChange={(e) => onChange({ ...data, part4: e.target.value })}
-            disabled={!canEdit}
+            readOnly={!canEdit}
             placeholder="Part 4へのコメント"
             className={colorClass}
           />
@@ -864,7 +864,7 @@ function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: an
         <Textarea
           value={data.overall}
           onChange={(e) => onChange({ ...data, overall: e.target.value })}
-          disabled={!canEdit}
+          readOnly={!canEdit}
           placeholder="総評（全体へのフィードバック）"
           className={`min-h-[100px] ${colorClass}`}
         />
