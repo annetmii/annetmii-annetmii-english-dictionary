@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React, { useMemo, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
@@ -501,6 +502,11 @@ function LessonMetaBar({ currentLesson, onStatusChange, mode }: { currentLesson:
 
 function DayThemeEditor({ value, editable, onChange, weekdayLabel }: { value: string; editable: boolean; onChange: (v: string) => void; weekdayLabel: string; }) {
   return (
+     <div className="rounded-2xl border">
+    <div className="p-4 border-b flex items-center space-x-3">
+      <img src="/logo.png" alt="App Logo" className="h-8 w-8" />
+      <h1 className="text-xl font-bold">Annetmii English Dictionary</h1>
+    </div>
     <div className="rounded-2xl border bg-white">
       <div className="p-4 border-b">
         <h3 className="text-lg font-semibold">今日のテーマ</h3>
