@@ -208,206 +208,116 @@ a.download = `${month}_annetmii_english_dictionary.json`;
 
   function hasLesson(date: Date) { return Boolean(store[ymd(date)]); }
 
-  return (
-    <div className="min-h-screen w-full bg-white text-gray-900 p-3 sm:p-4 md:p-6 max-w-3xl mx-auto">
-      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b mb-3 sm:mb-4">
-        <div className="flex items-center justify-between py-2 gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              className="border rounded-xl px-3 py-1 text-sm hover:bg-gray-50"
-              onClick={() => setShowCalendar((s) => !s)}
-              aria-expanded={showCalendar}
-            >
-              {dateStr}（{theme.label}）
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs">学習者</span>
-            <Switch
-              checked={mode === "trainer"}
-              onCheckedChange={(v) => {
-                setPinError("");
-                if (v) {
-                  const has = !!getPin();
-                  setPinMode(has ? "verify" : "set");
-                  setPinInput("");
-                  setPinConfirm("");
-                  setPinOld("");
-                  setPinModalOpen(true);
-                } else {
-                  setMode("learner");
-                  setEditMode(false);
-                }
-              }}
-            />
-            <span className="text-xs">講師</span>
-          </div>
+return (
+  <div className="min-h-screen w-full bg-white text-gray-900 p-3 sm:p-4 md:p-6 max-w-3xl mx-auto">
+    <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b mb-3 sm:mb-4">
+      <div className="flex items-center justify-between py-2 gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            className="border rounded-xl px-3 py-1 text-sm hover:bg-gray-50"
+            onClick={() => setShowCalendar((s) => !s)}
+            aria-expanded={showCalendar}
+          >
+            {dateStr}（{theme.label}）
+          </button>
         </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs">学習者</span>
+          <Switch
+            checked={mode === "trainer"}
+            onCheckedChange={(v) => {
+              setPinError("");
+              if (v) {
+                const has = !!getPin();
+                setPinMode(has ? "verify" : "set");
+                setPinInput(""); setPinConfirm(""); setPinOld("");
+                setPinModalOpen(true);
+              } else {
+                setMode("learner");
+                setEditMode(false);
+              }
+            }}
+          />
+          <span className="text-xs">講師</span>
+        </div>
+      </div>
 
-        {showCalendar && (
-          <div className="pb-3">
-            <div className="rounded-2xl border bg-white shadow-sm">
-              <div className="p-4">
-                <Calendar
-                  locale="ja-JP"
-                  value={new Date(dateStr)}
-                  onChange={(v: any) => {
-                    const d = Array.isArray(v) ? v[0] : v;
-                    setDateStr(ymd(d));
-                    setShowCalendar(false);
-                  }}
-                  prev2Label={null}
-                  next2Label={null}
-                  tileClassName={({ date }) => hasLesson(date) ? "relative" : undefined}
-                  tileContent={({ date }) => hasLesson(date) ? (
-                    <span className="absolute left-1/2 -translate-x-1/2 mt-6 h-1.5 w-1.5 rounded-full bg-blue-500"></span>
-                  ) : null}
-                />
-                <div className="mt-2 text-xs text-gray-500 flex items-center gap-3">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
-                    レッスンあり
-                  </span>
-                  <span>日付をタップで切替</span>
-                </div>
+      {showCalendar && (
+        <div className="pb-3">
+          <div className="rounded-2xl border bg-white shadow-sm">
+            <div className="p-4">
+              <Calendar
+                locale="ja-JP"
+                value={new Date(dateStr)}
+                onChange={(v: any) => {
+                  const d = Array.isArray(v) ? v[0] : v;
+                  setDateStr(ymd(d));
+                  setShowCalendar(false);
+                }}
+                prev2Label={null}
+                next2Label={null}
+                tileClassName={({ date }) => hasLesson(date) ? "relative" : undefined}
+                tileContent={({ date }) => hasLesson(date) ? (
+                  <span className="absolute left-1/2 -translate-x-1/2 mt-6 h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                ) : null}
+              />
+              <div className="mt-2 text-xs text-gray-500 flex items-center gap-3">
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
+                  レッスンあり
+                </span>
+                <span>日付をタップで切替</span>
               </div>
             </div>
           </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2 pb-2">
-          {mode === "trainer" && (
-  <Button size="sm" onClick={createOrLoadTemplate}>
-    この日のレッスン作成
-  </Button>
-)}
-          <Button size="sm" variant="outline" onClick={() => window.print()}>印刷 / PDF保存</Button>
-          <Button size="sm" variant="outline" onClick={exportJSON}>データ書き出し</Button>
-          <input id="data-import" type="file" accept="application/json" className="hidden" onChange={importJSON} />
-          <Button size="sm" variant="outline" onClick={() => document.getElementById('data-import')?.click()}>
-              データ読み込み
-              {mode === "trainer" && (
-  <div className="flex flex-wrap items-center gap-2 pb-2 mt-2">
-    <Button
-      size="sm"
-      variant={editMode ? "default" : "outline"}
-      onClick={() => setEditMode(!editMode)}
-    >
-      {editMode ? "編集モード：ON" : "編集モード：OFF"}
-    </Button>
-
-    <Button
-      size="sm"
-      variant="outline"
-      onClick={() => { setPinMode("change"); setPinModalOpen(true); }}
-    >
-      PIN変更
-    </Button>
-
-    {currentLesson && (
-      <Button size="sm" variant="outline" onClick={removeLesson}>
-        このレッスンを削除
-      </Button>
-    )}
-  </div>
-)}
-            </span>
-          </label>
         </div>
-      </header>
+      )}
 
-      <Dialog open={pinModalOpen} onOpenChange={(o) => { setPinModalOpen(o); if (!o) setPinError(""); }}>
-        <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>
-              {pinMode === "set" && "講師PINの新規設定"}
-              {pinMode === "verify" && "講師PINの入力"}
-              {pinMode === "change" && "講師PINの変更"}
-            </DialogTitle>
-            <DialogDescription>
-              {pinMode === "set" && "講師モードに切り替えるためのPINを設定します。忘れないようご注意ください。"}
-              {pinMode === "verify" && "講師モードに切り替えるために、PINを入力してください。"}
-              {pinMode === "change" && "現在のPINを確認してから、新しいPINを設定します。"}
-            </DialogDescription>
-          </DialogHeader>
+      {/* ボタン列 */}
+      <div className="flex flex-wrap items-center gap-2 pb-2">
+        {mode === "trainer" && (
+          <Button size="sm" onClick={createOrLoadTemplate}>この日のレッスン作成</Button>
+        )}
+        <Button size="sm" variant="outline" onClick={() => window.print()}>印刷 / PDF保存</Button>
+        <Button size="sm" variant="outline" onClick={exportJSON}>データ書き出し</Button>
 
-          <div className="grid gap-3 p-4 pt-0">
-            {pinMode === "change" && (
-              <div className="grid gap-1.5">
-                <Label htmlFor="pinOld">現在のPIN</Label>
-                <Input id="pinOld" type="password" inputMode="numeric" value={pinOld} onChange={(e) => setPinOld(e.target.value)} />
-              </div>
-            )}
+        {/* 形を統一：隠しinputをButtonでクリック */}
+        <input id="data-import" type="file" accept="application/json" className="hidden" onChange={importJSON} />
+        <Button size="sm" variant="outline" onClick={() => document.getElementById('data-import')?.click()}>
+          データ読み込み
+        </Button>
+      </div>
 
-            {(pinMode === "set" || pinMode === "change") && (
-              <>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="pinNew">新しいPIN</Label>
-                  <Input id="pinNew" type="password" inputMode="numeric" value={pinInput} onChange={(e) => setPinInput(e.target.value)} />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="pinConfirm">新しいPIN（確認）</Label>
-                  <Input id="pinConfirm" type="password" inputMode="numeric" value={pinConfirm} onChange={(e) => setPinConfirm(e.target.value)} />
-                </div>
-              </>
-            )}
-
-            {pinMode === "verify" && (
-              <div className="grid gap-1.5">
-                <Label htmlFor="pinVerify">PIN</Label>
-                <Input id="pinVerify" type="password" inputMode="numeric" value={pinInput} onChange={(e) => setPinInput(e.target.value)} />
-              </div>
-            )}
-
-            {pinError && <p className="text-sm text-red-600">{pinError}</p>}
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setPinModalOpen(false)}>キャンセル</Button>
-            <Button
-              onClick={() => {
-                setPinError("");
-                const current = getPin();
-
-                if (pinMode === "verify") {
-                  if (!pinInput) return setPinError("PINを入力してください。");
-                  if (pinInput !== current) return setPinError("PINが違います。");
-                  setMode("trainer");
-                  setEditMode(true);
-                  setPinModalOpen(false);
-                  return;
-                }
-
-                if (pinMode === "set") {
-                  if (!pinInput) return setPinError("新しいPINを入力してください。");
-                  if (pinInput !== pinConfirm) return setPinError("確認用PINが一致しません。");
-                  setPin(pinInput);
-                  setMode("trainer");
-                  setEditMode(true);
-                  setPinModalOpen(false);
-                  return;
-                }
-
-                if (pinMode === "change") {
-                  if (current && pinOld !== current) return setPinError("現在のPINが一致しません。");
-                  if (!pinInput) return setPinError("新しいPINを入力してください。");
-                  if (pinInput !== pinConfirm) return setPinError("確認用PINが一致しません。");
-                  setPin(pinInput);
-                  setPinModalOpen(false);
-                  return;
-                }
-              }}
-            >
-              決定
+      {/* 講師用ツールバー */}
+      {mode === "trainer" && (
+        <div className="flex flex-wrap items-center gap-2 pb-2">
+          <Button
+            size="sm"
+            variant={editMode ? "default" : "outline"}
+            onClick={() => setEditMode(!editMode)}
+          >
+            {editMode ? "編集モード：ON" : "編集モード：OFF"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => { setPinMode("change"); setPinModalOpen(true); }}
+          >
+            PIN変更
+          </Button>
+          {currentLesson && (
+            <Button size="sm" variant="outline" onClick={removeLesson}>
+              このレッスンを削除
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          )}
+        </div>
+      )}
+    </header>
 
-      {!currentLesson ? (
-        <EmptyState themeLabel={theme.label} />
-      ) : (
-        <div className="space-y-4 text-[15px] sm:text-base">
+    {/* ここから本文。ボタン列の下は少し大きめの文字 */}
+    <div className="text-[15px] sm:text-base">
+      {/* ← この直後に、あなたの既存の {!currentLesson ? ( ... ) : ( ... )} ブロックが続きます */}
+
           <LessonMetaBar currentLesson={currentLesson} onStatusChange={setStatus} mode={mode} />
 
           <DayThemeEditor
@@ -735,8 +645,8 @@ function DayThemeEditor({
           placeholder="例）面接日の再調整メール／候補者への日程提案フレーズ／謝罪＋代替案"
           className="min-h-[80px]"
         />
-      </div>
-    </div>
-  );
+      </div>  {/* ← 本文ラッパーの閉じ */}
+  </div>    {/* ← 最外コンテナの閉じ */}
+);
 }
 
