@@ -812,9 +812,10 @@ function SectionPart4({ data, onChange, disabled }: { data: any; onChange: (d: a
 
 function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: any) => void; mode: "learner" | "trainer" }) {
   const canEdit = mode === "trainer";
-  // 見た目だけ赤/黒を切替（JSON保存はしない）
-  const [commentColor, setCommentColor] = useState<"black" | "red">("black");
-  const colorClass = commentColor === "red" ? "text-red-600" : "text-gray-900";
+// 見た目だけ赤/黒（JSON保存なし）
+const [commentColor, setCommentColor] = useState<"black" | "red">("black");
+// iOS/Safariでも絶対に反映させるためインライン色を用意
+const textColorHex = commentColor === "red" ? "#dc2626" /* red-600 */ : "#111827" /* gray-900 */;
 
   return (
     <div className="rounded-2xl border bg-white">
@@ -837,28 +838,32 @@ function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: an
             onChange={(e) => onChange({ ...data, part1: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 1へのコメント"
-            className={colorClass}
+            className={commentColor === "red" ? "text-red-600" : "text-gray-900"}
+            style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
           />
           <Textarea
             value={data.part2}
             onChange={(e) => onChange({ ...data, part2: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 2へのコメント"
-            className={colorClass}
+            className={commentColor === "red" ? "text-red-600" : "text-gray-900"}
+            style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
           />
           <Textarea
             value={data.part3}
             onChange={(e) => onChange({ ...data, part3: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 3へのコメント"
-            className={colorClass}
+            className={commentColor === "red" ? "text-red-600" : "text-gray-900"}
+            style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
           />
           <Textarea
             value={data.part4}
             onChange={(e) => onChange({ ...data, part4: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 4へのコメント"
-            className={colorClass}
+            className={commentColor === "red" ? "text-red-600" : "text-gray-900"}
+            style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
           />
         </div>
         <Textarea
@@ -866,7 +871,8 @@ function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: an
           onChange={(e) => onChange({ ...data, overall: e.target.value })}
           readOnly={!canEdit}
           placeholder="総評（全体へのフィードバック）"
-          className={`min-h-[100px] ${colorClass}`}
+          className={`min-h-[100px] ${commentColor === "red" ? "text-red-600" : "text-gray-900"}`}
+          style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
         />
       </div>
     </div>
