@@ -651,7 +651,7 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
                 className="min-h-[60px] leading-6"
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Input
+                <Textarea
                   value={it.userEN}
                   disabled={disabled}
                   onChange={(e) => updateItem(i, { userEN: e.target.value })}
@@ -662,7 +662,7 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
                      it.colorEN === "red" ? "bg-red-100 " : "") + ""
                   }
                 />
-                <Input
+                <Textarea
                   value={it.userJP}
                   disabled={disabled}
                   onChange={(e) => updateItem(i, { userJP: e.target.value })}
@@ -832,6 +832,10 @@ function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: an
 
   // iOS/Safari でも確実に色が出るようにインライン色を併用
   const textColorHex = commentColor === "red" ? "#dc2626" /* red-600 */ : "#111827" /* gray-900 */;
+  // 空かどうかで色付けを出し分け（空=色なし→placeholderは薄グレーのまま）
+const isEmpty = (v: any) => !String(v ?? "").trim().length;
+const clsFor = (has: boolean) => has ? (commentColor === "red" ? "text-red-600" : "text-gray-900") : "";
+const styleFor = (has: boolean) => has ? ({ color: textColorHex, WebkitTextFillColor: textColorHex } as React.CSSProperties) : undefined;
 
   return (
     <div className="rounded-2xl border bg-white">
@@ -866,32 +870,32 @@ function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: an
             onChange={(e) => onChange({ ...data, part1: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 1へのコメント"
-            className={commentColor === "red" ? "text-red-600" : "text-gray-900"}
-            style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
+            className={clsFor(!isEmpty(data.part1))}
+            style={styleFor(!isEmpty(data.part1))}
           />
           <Textarea
             value={data.part2}
             onChange={(e) => onChange({ ...data, part2: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 2へのコメント"
-            className={commentColor === "red" ? "text-red-600" : "text-gray-900"}
-            style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
+            className={clsFor(!isEmpty(data.part1))}
+            style={styleFor(!isEmpty(data.part1))}
           />
           <Textarea
             value={data.part3}
             onChange={(e) => onChange({ ...data, part3: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 3へのコメント"
-            className={commentColor === "red" ? "text-red-600" : "text-gray-900"}
-            style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
+            className={clsFor(!isEmpty(data.part1))}
+            style={styleFor(!isEmpty(data.part1))}
           />
           <Textarea
             value={data.part4}
             onChange={(e) => onChange({ ...data, part4: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 4へのコメント"
-            className={commentColor === "red" ? "text-red-600" : "text-gray-900"}
-            style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
+            className={clsFor(!isEmpty(data.part1))}
+            style={styleFor(!isEmpty(data.part1))}
           />
         </div>
 
@@ -900,8 +904,8 @@ function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: an
           onChange={(e) => onChange({ ...data, overall: e.target.value })}
           readOnly={!canEdit}
           placeholder="総評（全体へのフィードバック）"
-          className={`min-h-[100px] ${commentColor === "red" ? "text-red-600" : "text-gray-900"}`}
-          style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
+          className={`min-h-[100px] ${clsFor(!isEmpty(data.overall))}`}
+          style={styleFor(!isEmpty(data.overall))}
         />
       </div>
     </div>
