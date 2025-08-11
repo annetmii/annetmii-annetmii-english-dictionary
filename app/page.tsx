@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 
 const APP_KEY = "annetmii-English-Dictionary-v1";
 const PIN_KEY = `${APP_KEY}::trainer_pin`;
+const COMMENT_COLOR_KEY = `${APP_KEY}::comment_color`;
 
 const weekdayTheme: Record<number, { key: string; label: string }> = {
   0: { key: "seasonal", label: "Seasonal（季節・イベント・行事）" },
@@ -812,10 +813,25 @@ function SectionPart4({ data, onChange, disabled }: { data: any; onChange: (d: a
 
 function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: any) => void; mode: "learner" | "trainer" }) {
   const canEdit = mode === "trainer";
-// 見た目だけ赤/黒（JSON保存なし）
-const [commentColor, setCommentColor] = useState<"black" | "red">("black");
-// iOS/Safariでも絶対に反映させるためインライン色を用意
-const textColorHex = commentColor === "red" ? "#dc2626" /* red-600 */ : "#111827" /* gray-900 */;
+
+  // 初期値は localStorage から復元（無ければ黒）
+  const [commentColor, setCommentColor] = useState<"black" | "red">(() => {
+    try {
+      const saved = localStorage.getItem(COMMENT_COLOR_KEY);
+      return (saved === "red" || saved === "black") ? (saved as "black" | "red") : "black";
+    } catch {
+      return "black";
+    }
+  });
+
+  // ボタン押下時に state と localStorage を両方更新
+  const applyColor = (c: "black" | "red") => {
+    setCommentColor(c);
+    try { localStorage.setItem(COMMENT_COLOR_KEY, c); } catch {}
+  };
+
+  // iOS/Safari でも確実に色が出るようにインライン色を併用
+  const textColorHex = commentColor === "red" ? "#dc2626" /* red-600 */ : "#111827" /* gray-900 */;
 
   return (
     <div className="rounded-2xl border bg-white">
@@ -826,8 +842,20 @@ const textColorHex = commentColor === "red" ? "#dc2626" /* red-600 */ : "#111827
         {canEdit && (
           <div className="flex items-center gap-2 text-xs">
             <span className="text-gray-600">文字色：</span>
-            <Button size="sm" variant={commentColor === "black" ? "default" : "outline"} onClick={() => setCommentColor("black")}>黒文字</Button>
-            <Button size="sm" variant={commentColor === "red" ? "default" : "outline"} onClick={() => setCommentColor("red")}>赤文字</Button>
+            <Button
+              size="sm"
+              variant={commentColor === "black" ? "default" : "outline"}
+              onClick={() => applyColor("black")}
+            >
+              黒文字
+            </Button>
+            <Button
+              size="sm"
+              variant={commentColor === "red" ? "default" : "outline"}
+              onClick={() => applyColor("red")}
+            >
+              赤文字
+            </Button>
             <span className="text-gray-400">（※色は見た目のみ。データには保存されません）</span>
           </div>
         )}
@@ -866,6 +894,7 @@ const textColorHex = commentColor === "red" ? "#dc2626" /* red-600 */ : "#111827
             style={{ color: textColorHex, WebkitTextFillColor: textColorHex }}
           />
         </div>
+
         <Textarea
           value={data.overall}
           onChange={(e) => onChange({ ...data, overall: e.target.value })}
