@@ -182,7 +182,8 @@ export default function Page() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "annetmii_english_dictionary_data.json";
+    const month = (dateStr || new Date().toISOString().slice(0,10)).slice(0,7).replace("-", ""); // YYYYMM
+a.download = `${month}_annetmii_english_dictionary.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -275,7 +276,11 @@ export default function Page() {
         )}
 
         <div className="flex flex-wrap items-center gap-2 pb-2">
-          <Button size="sm" onClick={createOrLoadTemplate}>この日のレッスン作成</Button>
+          {mode === "trainer" && (
+  <Button size="sm" onClick={createOrLoadTemplate}>
+    この日のレッスン作成
+  </Button>
+)}
           <Button size="sm" variant="outline" onClick={() => window.print()}>印刷 / PDF保存</Button>
           <Button size="sm" variant="outline" onClick={exportJSON}>データ書き出し</Button>
           <label className="inline-flex items-center">
@@ -496,7 +501,7 @@ function LessonMetaBar({ currentLesson, onStatusChange, mode }: { currentLesson:
     <div className="rounded-2xl border bg-white">
       <div className="p-4 py-3 flex flex-wrap items-center gap-3 justify-between">
         <div className="text-sm">
-          <div className="font-medium">{currentLesson.meta?.title}</div>
+          <div className="text-lg font-semibold">{currentLesson.meta?.title}</div>
           <div className="text-xs text-gray-500">ステータス：{statusLabel[s]}</div>
         </div>
         <div className="flex items-center gap-2 text-xs">
@@ -530,7 +535,7 @@ function SectionPart1({ data, onChange, disabled, editMode }: { data: any; onCha
         <h3 className="text-lg font-semibold">{data.title}</h3>
       </div>
       <div className="p-4 space-y-3">
-        <p className="text-sm text-gray-600">{data.instructions}</p>
+        <p className="text-sm text-gray-900">{data.instructions}</p>
         <div className="space-y-2">
           {data.items.map((it: any, i: number) => (
             <div key={it.id} className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
@@ -576,12 +581,12 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
         <h3 className="text-lg font-semibold">{data.title}</h3>
       </div>
       <div className="p-4 space-y-3">
-        <p className="text-sm text-gray-600">{data.instructions}</p>
+        <p className="text-sm text-gray-900">{data.instructions}</p>
         <div className="space-y-3">
           {data.items.map((it: any, i: number) => (
             <div key={it.id} className="space-y-2 border rounded-xl p-3">
               <div className="flex items-start gap-2">
-                <Input value={it.prompt} disabled={!editMode} onChange={(e) => updateItem(i, { prompt: e.target.value })} placeholder="英文プロンプト（編集モードで修正）" />
+                <Textarea value={it.prompt} disabled={!editMode} onChange={(e) => updateItem(i, { prompt: e.target.value })} placeholder="英文プロンプト（編集モードで修正）"className="min-h-[60px] leading-6" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Input value={it.userEN} disabled={disabled} onChange={(e) => updateItem(i, { userEN: e.target.value })} placeholder="英語の解答（穴埋め文）" />
@@ -627,11 +632,11 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
         <h3 className="text-lg font-semibold">{data.title}</h3>
       </div>
       <div className="p-4 space-y-3">
-        <p className="text-sm text-gray-600">{data.instructions}</p>
+        <p className="text-sm text-gray-900">{data.instructions}</p>
         <div className="space-y-3">
           {data.items.map((it: any, i: number) => (
             <div key={it.id} className="space-y-2 border rounded-xl p-3">
-              <Input value={it.scene} disabled={!editMode} onChange={(e) => updateItem(i, { scene: e.target.value })} placeholder="シーン（編集モードで修正） 例：二次面接の調整" />
+              <Textarea value={it.scene} disabled={!editMode} onChange={(e) => updateItem(i, { scene: e.target.value })} placeholder="シーン（編集モードで修正） 例：二次面接の調整"className="min-h-[60px] leading-6" />
               <div className="grid grid-cols-1 gap-2">
                 <Textarea value={it.masayukiJP} disabled={!editMode} onChange={(e) => updateItem(i, { masayukiJP: e.target.value })} placeholder="Masayukiの日本語セリフ（編集モードで修正）" />
                 <Textarea value={it.masayukiEN} disabled={disabled} onChange={(e) => updateItem(i, { masayukiEN: e.target.value })} placeholder="↑の英訳を入力" />
@@ -661,7 +666,7 @@ function SectionPart4({ data, onChange, disabled }: { data: any; onChange: (d: a
         <h3 className="text-lg font-semibold">{data.title}</h3>
       </div>
       <div className="p-4 space-y-3">
-        <p className="text-sm text-gray-600">{data.instructions}</p>
+        <p className="text-sm text-gray-900">{data.instructions}</p>
         <Textarea value={data.content} disabled={disabled} onChange={(e) => onChange({ ...data, content: e.target.value })} placeholder="自由英作文（テーマに沿って）" className="min-h-[140px]" />
       </div>
     </div>
@@ -722,9 +727,6 @@ function DayThemeEditor({
     <div className="rounded-2xl border bg-white">
       <div className="p-4 border-b">
         <h3 className="text-lg font-semibold">今日のテーマ</h3>
-        <p className="text-xs text-gray-500 mt-1">
-          曜日テーマ：{weekdayLabel}
-        </p>
       </div>
       <div className="p-4">
         <Textarea
