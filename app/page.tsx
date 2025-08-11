@@ -491,6 +491,9 @@ function LessonMetaBar({ currentLesson, onStatusChange, mode }: { currentLesson:
   <div className="text-lg font-semibold text-gray-900">
     {currentLesson.meta?.date}｜{currentLesson.meta?.theme}
   </div>
+  <div className="mt-1 text-xs text-gray-800">
+    ステータス：{statusLabel[s]}
+  </div>
 </div>
     </div>
   );
