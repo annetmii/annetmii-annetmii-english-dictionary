@@ -313,7 +313,7 @@ export default function Page() {
           <div className="space-y-4">
             <LessonMetaBar currentLesson={currentLesson} onStatusChange={setStatus} mode={mode} />
 
-            {/* 今日のテーマ（自由記入） */}
+            {/* 今日のテーマ */}
             <DayThemeEditor
               value={currentLesson.meta?.customTheme || ""}
               editable={mode === "trainer" && editMode}
@@ -505,9 +505,9 @@ function DayThemeEditor({ value, editable, onChange, weekdayLabel }: { value: st
       <div className="p-4">
         <Textarea
           value={value}
-          disabled={!editable}
+          readOnly={!editable}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="例）面接日の再調整メール／候補者への日程提案フレーズ／謝罪＋代替案"
+          placeholder="Picture Dictionaryの「Job Search」（p.173）を参考に学びましょう。"
           className="min-h-[80px] leading-6"
         />
       </div>
@@ -638,7 +638,7 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
             <div key={it.id} className="space-y-2 border rounded-xl p-3">
               <Textarea value={it.scene} readOnly={!editMode} onChange={(e) => updateItem(i, { scene: e.target.value })} placeholder="シーン（編集モードで修正） 例：二次面接の調整" className="min-h-[60px] leading-6" />
               <div className="grid grid-cols-1 gap-2">
-                <Textarea value={it.masayukiJP} disabled={!editMode} onChange={(e) => updateItem(i, { masayukiJP: e.target.value })} placeholder="Masayukiの日本語セリフ（編集モードで修正）" />
+                <Textarea value={it.masayukiJP} readOnly={!editMode} onChange={(e) => updateItem(i, { masayukiJP: e.target.value })} placeholder="Masayukiの日本語セリフ（編集モードで修正）" />
                 <Textarea value={it.masayukiEN} disabled={disabled} onChange={(e) => updateItem(i, { masayukiEN: e.target.value })} placeholder="↑の英訳を入力" />
               </div>
               {editMode && (
