@@ -487,19 +487,11 @@ function LessonMetaBar({ currentLesson, onStatusChange, mode }: { currentLesson:
   };
   return (
     <div className="rounded-2xl border bg-white">
-      <div className="p-4 py-3 flex flex-wrap items-center gap-3 justify-between">
-        <div className="text-sm">
-          <div className="text-lg font-semibold text-gray-900">
-            {currentLesson.meta?.title}
-            {currentLesson.meta?.customTheme ? `｜${currentLesson.meta.customTheme}` : ""}
-          </div>
-          <div className="text-xs text-gray-800">ステータス：{statusLabel[s]}</div>
-        </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-gray-800">学習の流れ：</span>
-          <span>提出 → 返却 → 確認</span>
-        </div>
-      </div>
+      <div className="p-4 py-3">
+  <div className="text-lg font-semibold text-gray-900">
+    {currentLesson.meta?.date}｜{currentLesson.meta?.theme}
+  </div>
+</div>
     </div>
   );
 }
@@ -508,7 +500,7 @@ function DayThemeEditor({ value, editable, onChange, weekdayLabel }: { value: st
   return (
     <div className="rounded-2xl border bg-white">
       <div className="p-4 border-b">
-        <h3 className="text-lg font-semibold">今日のテーマ（自由記入）</h3>
+        <h3 className="text-lg font-semibold">今日のテーマ</h3>
       </div>
       <div className="p-4">
         <Textarea
@@ -549,7 +541,7 @@ function SectionPart1({ data, onChange, disabled, editMode }: { data: any; onCha
         <div className="space-y-2">
           {data.items.map((it: any, i: number) => (
             <div key={it.id} className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
-              <Textarea value={it.term} disabled={!editMode} onChange={(e) => updateItem(i, { term: e.target.value })} placeholder="英単語 / フレーズ（編集モードで修正）" className="min-h-[44px] leading-6" />
+              <Input value={it.term} readOnly={!editMode} onChange={(e) => updateItem(i, { term: e.target.value })} placeholder="英単語 / フレーズ（編集モードで修正）" className="leading-6" />
               <Input value={it.answerJP} disabled={disabled} onChange={(e) => updateItem(i, { answerJP: e.target.value })} placeholder="日本語訳を入力" />
               {editMode && (
                 <div className="sm:col-span-2 flex justify-end">
@@ -595,7 +587,7 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
         <div className="space-y-3">
           {data.items.map((it: any, i: number) => (
             <div key={it.id} className="space-y-2 border rounded-xl p-3">
-              <Textarea value={it.prompt} disabled={!editMode} onChange={(e) => updateItem(i, { prompt: e.target.value })} placeholder="英文プロンプト（編集モードで修正）" className="min-h-[60px] leading-6" />
+              <Textarea value={it.prompt} readOnly={!editMode} onChange={(e) => updateItem(i, { prompt: e.target.value })} placeholder="英文プロンプト（編集モードで修正）" className="min-h-[60px] leading-6" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Input value={it.userEN} disabled={disabled} onChange={(e) => updateItem(i, { userEN: e.target.value })} placeholder="英語の解答（穴埋め文）" />
                 <Input value={it.userJP} disabled={disabled} onChange={(e) => updateItem(i, { userJP: e.target.value })} placeholder="日本語訳" />
@@ -644,7 +636,7 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
         <div className="space-y-3">
           {data.items.map((it: any, i: number) => (
             <div key={it.id} className="space-y-2 border rounded-xl p-3">
-              <Textarea value={it.scene} disabled={!editMode} onChange={(e) => updateItem(i, { scene: e.target.value })} placeholder="シーン（編集モードで修正） 例：二次面接の調整" className="min-h-[60px] leading-6" />
+              <Textarea value={it.scene} readOnly={!editMode} onChange={(e) => updateItem(i, { scene: e.target.value })} placeholder="シーン（編集モードで修正） 例：二次面接の調整" className="min-h-[60px] leading-6" />
               <div className="grid grid-cols-1 gap-2">
                 <Textarea value={it.masayukiJP} disabled={!editMode} onChange={(e) => updateItem(i, { masayukiJP: e.target.value })} placeholder="Masayukiの日本語セリフ（編集モードで修正）" />
                 <Textarea value={it.masayukiEN} disabled={disabled} onChange={(e) => updateItem(i, { masayukiEN: e.target.value })} placeholder="↑の英訳を入力" />
