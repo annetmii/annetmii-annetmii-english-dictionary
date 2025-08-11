@@ -283,9 +283,8 @@ a.download = `${month}_annetmii_english_dictionary.json`;
 )}
           <Button size="sm" variant="outline" onClick={() => window.print()}>印刷 / PDF保存</Button>
           <Button size="sm" variant="outline" onClick={exportJSON}>データ書き出し</Button>
-          <label className="inline-flex items-center">
-            <input type="file" accept="application/json" className="hidden" onChange={importJSON} />
-            <span className="inline-flex items-center gap-1 border rounded-md px-3 py-1 text-sm cursor-pointer">
+          <input id="data-import" type="file" accept="application/json" className="hidden" onChange={importJSON} />
+          <Button size="sm" variant="outline" onClick={() => document.getElementById('data-import')?.click()}>
               データ読み込み
               {mode === "trainer" && (
   <div className="flex flex-wrap items-center gap-2 pb-2 mt-2">
@@ -408,7 +407,7 @@ a.download = `${month}_annetmii_english_dictionary.json`;
       {!currentLesson ? (
         <EmptyState themeLabel={theme.label} />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 text-[15px] sm:text-base">
           <LessonMetaBar currentLesson={currentLesson} onStatusChange={setStatus} mode={mode} />
 
           <DayThemeEditor
@@ -474,7 +473,7 @@ a.download = `${month}_annetmii_english_dictionary.json`;
 
 function EmptyState({ themeLabel }: { themeLabel: string }) {
   return (
-    <div className="rounded-2xl border border-dashed p-4 bg-white">
+    <div className="rounded-2xl border border-dashed p-4 bg-white text-[15px] sm:text-base">
       <h3 className="text-lg font-semibold mb-2">アプリへようこそ — "annetmii English Dictionary"</h3>
       <div className="text-sm space-y-1">
         <p>この日のレッスンは未作成です。以下のボタンからテンプレートを作成してください。</p>
