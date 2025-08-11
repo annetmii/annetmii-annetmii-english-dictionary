@@ -814,7 +814,7 @@ function SectionPart4({ data, onChange, disabled }: { data: any; onChange: (d: a
 function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: any) => void; mode: "learner" | "trainer" }) {
   const canEdit = mode === "trainer";
 
-  // 初期値は localStorage から復元（無ければ黒）
+  // 赤/黒の選択を localStorage から復元（保存先キーは既に先頭で宣言した COMMENT_COLOR_KEY を使用）
   const [commentColor, setCommentColor] = useState<"black" | "red">(() => {
     try {
       const saved = localStorage.getItem(COMMENT_COLOR_KEY);
@@ -823,19 +823,19 @@ function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: an
       return "black";
     }
   });
-
-  // ボタン押下時に state と localStorage を両方更新
   const applyColor = (c: "black" | "red") => {
     setCommentColor(c);
     try { localStorage.setItem(COMMENT_COLOR_KEY, c); } catch {}
   };
 
-  // iOS/Safari でも確実に色が出るようにインライン色を併用
+  // iOS/Safari 対策：実テキストがある時だけインライン色を当てる
   const textColorHex = commentColor === "red" ? "#dc2626" /* red-600 */ : "#111827" /* gray-900 */;
-  // 空かどうかで色付けを出し分け（空=色なし→placeholderは薄グレーのまま）
-const isEmpty = (v: any) => !String(v ?? "").trim().length;
-const clsFor = (has: boolean) => has ? (commentColor === "red" ? "text-red-600" : "text-gray-900") : "";
-const styleFor = (has: boolean) => has ? ({ color: textColorHex, WebkitTextFillColor: textColorHex } as React.CSSProperties) : undefined;
+
+  // 空欄判定と色ヘルパー（空欄なら色を当てない→placeholderが薄グレーのまま）
+  const isEmpty = (v: any) => !String(v ?? "").trim().length;
+  const clsFor = (has: boolean) =>
+    (has ? (commentColor === "red" ? "text-red-600" : "text-gray-900") : "") + " placeholder:text-gray-400";
+  const styleFor = (has: boolean) => has ? ({ color: textColorHex, WebkitTextFillColor: textColorHex } as React.CSSProperties) : undefined;
 
   return (
     <div className="rounded-2xl border bg-white">
@@ -846,20 +846,8 @@ const styleFor = (has: boolean) => has ? ({ color: textColorHex, WebkitTextFillC
         {canEdit && (
           <div className="flex items-center gap-2 text-xs">
             <span className="text-gray-600">文字色：</span>
-            <Button
-              size="sm"
-              variant={commentColor === "black" ? "default" : "outline"}
-              onClick={() => applyColor("black")}
-            >
-              黒文字
-            </Button>
-            <Button
-              size="sm"
-              variant={commentColor === "red" ? "default" : "outline"}
-              onClick={() => applyColor("red")}
-            >
-              赤文字
-            </Button>
+            <Button size="sm" variant={commentColor === "black" ? "default" : "outline"} onClick={() => applyColor("black")}>黒文字</Button>
+            <Button size="sm" variant={commentColor === "red" ? "default" : "outline"} onClick={() => applyColor("red")}>赤文字</Button>
             <span className="text-gray-400">（※色は見た目のみ。データには保存されません）</span>
           </div>
         )}
@@ -878,24 +866,24 @@ const styleFor = (has: boolean) => has ? ({ color: textColorHex, WebkitTextFillC
             onChange={(e) => onChange({ ...data, part2: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 2へのコメント"
-            className={clsFor(!isEmpty(data.part1))}
-            style={styleFor(!isEmpty(data.part1))}
+            className={clsFor(!isEmpty(data.part2))}
+            style={styleFor(!isEmpty(data.part2))}
           />
           <Textarea
             value={data.part3}
             onChange={(e) => onChange({ ...data, part3: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 3へのコメント"
-            className={clsFor(!isEmpty(data.part1))}
-            style={styleFor(!isEmpty(data.part1))}
+            className={clsFor(!isEmpty(data.part3))}
+            style={styleFor(!isEmpty(data.part3))}
           />
           <Textarea
             value={data.part4}
             onChange={(e) => onChange({ ...data, part4: e.target.value })}
             readOnly={!canEdit}
             placeholder="Part 4へのコメント"
-            className={clsFor(!isEmpty(data.part1))}
-            style={styleFor(!isEmpty(data.part1))}
+            className={clsFor(!isEmpty(data.part4))}
+            style={styleFor(!isEmpty(data.part4))}
           />
         </div>
 
