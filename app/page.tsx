@@ -208,12 +208,12 @@ export default function Page() {
         <Image
           src="/logo.png"
           alt="annetmii English Dictionary Logo"
-          width={80}
-          height={80}
+          width={88}
+          height={88}
           className="mb-2"
         />
         <h1 className="text-2xl font-bold text-gray-900">
-          annetmii English Dictionary
+          English Dictionary
         </h1>
       </div>
 
