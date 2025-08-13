@@ -1344,4 +1344,102 @@ function SectionPart4({
     </div>
   );
 }
+function TrainerFeedback({
+  data,
+  onChange,
+  mode,
+}: {
+  data: any;
+  onChange: (d: any) => void;
+  mode: "learner" | "trainer";
+}) {
+  const canEdit = mode === "trainer";
+
+  // 文字色の保存/復元（見た目のみ、JSONには書かない）
+  const [commentColor, setCommentColor] = React.useState<"black" | "red">(() => {
+    try {
+      const saved = localStorage.getItem(COMMENT_COLOR_KEY);
+      return saved === "red" ? "red" : "black";
+    } catch {
+      return "black";
+    }
+  });
+  const applyColor = (c: "black" | "red") => {
+    setCommentColor(c);
+    try { localStorage.setItem(COMMENT_COLOR_KEY, c); } catch {}
+  };
+
+  // iOS/Safari 対策：実テキストがある時だけインライン色を当てる
+  const textColorHex = commentColor === "red" ? "#dc2626" : "#111827";
+  const isEmpty = (v: any) => !String(v ?? "").trim().length;
+  const clsFor = (has: boolean) =>
+    (has ? (commentColor === "red" ? "text-red-600" : "text-gray-900") : "") +
+    " placeholder:text-gray-400";
+  const styleFor = (has: boolean) =>
+    has ? ({ color: textColorHex, WebkitTextFillColor: textColorHex } as React.CSSProperties) : undefined;
+
+  return (
+    <div className="rounded-2xl border bg-white">
+      <div className="p-4 border-b">
+        <h3 className="text-lg font-semibold">Trainer Feedback（講師コメント）</h3>
+      </div>
+
+      <div className="p-4 space-y-3">
+        {canEdit && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-gray-600">文字色：</span>
+            <Button size="sm" variant={commentColor === "black" ? "default" : "outline"} onClick={() => applyColor("black")}>黒文字</Button>
+            <Button size="sm" variant={commentColor === "red" ? "default" : "outline"} onClick={() => applyColor("red")}>赤文字</Button>
+            <span className="text-gray-400">（※色は見た目のみ。データには保存されません）</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <Textarea
+            value={data.part1}
+            onChange={(e) => onChange({ ...data, part1: e.target.value })}
+            readOnly={!canEdit}
+            placeholder="Part 1へのコメント"
+            className={clsFor(!isEmpty(data.part1))}
+            style={styleFor(!isEmpty(data.part1))}
+          />
+          <Textarea
+            value={data.part2}
+            onChange={(e) => onChange({ ...data, part2: e.target.value })}
+            readOnly={!canEdit}
+            placeholder="Part 2へのコメント"
+            className={clsFor(!isEmpty(data.part2))}
+            style={styleFor(!isEmpty(data.part2))}
+          />
+          <Textarea
+            value={data.part3}
+            onChange={(e) => onChange({ ...data, part3: e.target.value })}
+            readOnly={!canEdit}
+            placeholder="Part 3へのコメント"
+            className={clsFor(!isEmpty(data.part3))}
+            style={styleFor(!isEmpty(data.part3))}
+          />
+          <Textarea
+            value={data.part4}
+            onChange={(e) => onChange({ ...data, part4: e.target.value })}
+            readOnly={!canEdit}
+            placeholder="Part 4へのコメント"
+            className={clsFor(!isEmpty(data.part4))}
+            style={styleFor(!isEmpty(data.part4))}
+          />
+        </div>
+
+        <Textarea
+          value={data.overall}
+          onChange={(e) => onChange({ ...data, overall: e.target.value })}
+          readOnly={!canEdit}
+          placeholder="総評（全体へのフィードバック）"
+          className={`min-h-[100px] ${clsFor(!isEmpty(data.overall))}`}
+          style={styleFor(!isEmpty(data.overall))}
+        />
+      </div>
+    </div>
+  );
+}
+
 
