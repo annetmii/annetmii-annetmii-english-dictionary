@@ -10,14 +10,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
 const APP_KEY = "annetmii-English-Dictionary-v1";
 const PIN_KEY = `${APP_KEY}::trainer_pin`;
-const COMMENT_COLOR_KEY = `${APP_KEY}::comment_color`; 
-const LAST_EXPORTED_AT_KEY = `${APP_KEY}::last_exported_at`; 
-const IMPORTED_THIS_SESSION_KEY = `${APP_KEY}::imported_this_session`; 
+const COMMENT_COLOR_KEY = `${APP_KEY}::comment_color`;
+const LAST_EXPORTED_AT_KEY = `${APP_KEY}::last_exported_at`;
+const IMPORTED_THIS_SESSION_KEY = `${APP_KEY}::imported_this_session`;
 
 const weekdayTheme: Record<number, { key: string; label: string }> = {
   0: { key: "seasonal", label: "Seasonal（季節・イベント・行事）" },
@@ -34,19 +41,34 @@ function ymd(d: Date) {
   return z.toISOString().slice(0, 10);
 }
 
+/* ===== localStorage ユーティリティ（SSR ガード付き）===== */
 function loadAll(): Record<string, any> {
-  try { return JSON.parse(localStorage.getItem(APP_KEY) || "{}"); } catch { return {}; }
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(APP_KEY) || "{}");
+  } catch {
+    return {};
+  }
 }
 function saveAll(data: Record<string, any>) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(APP_KEY, JSON.stringify(data));
 }
-
 function getPin(): string {
-  try { return localStorage.getItem(PIN_KEY) || ""; } catch { return ""; }
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem(PIN_KEY) || "";
+  } catch {
+    return "";
+  }
 }
 function setPin(pin: string) {
-  try { localStorage.setItem(PIN_KEY, pin); } catch {}
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PIN_KEY, pin);
+  } catch {}
 }
+/* ================================================ */
 
 function newEmptyLesson(dateStr: string, themeLabel: string) {
   return {
@@ -64,18 +86,31 @@ function newEmptyLesson(dateStr: string, themeLabel: string) {
       part1: {
         title: "Part 1｜語彙チェック（英単語→日本語訳, 8問）",
         instructions: "英単語の日本語訳を入力しましょう。",
-        // colorJP は最初は無くてもOK（後で付与される）。既存JSON互換のためこのまま。
-        items: Array.from({ length: 8 }).map((_, i) => ({ id: `p1-${i + 1}`, term: "", answerJP: "" })),
+        items: Array.from({ length: 8 }).map((_, i) => ({
+          id: `p1-${i + 1}`,
+          term: "",
+          answerJP: "",
+        })),
       },
       part2: {
         title: "Part 2｜構文トレーニング（穴埋め + 日本語訳, 5問）",
         instructions: "語彙を使って英文を完成させ、日本語訳も書きましょう。",
-        items: Array.from({ length: 5 }).map((_, i) => ({ id: `p2-${i + 1}`, prompt: "", userEN: "", userJP: "" })),
+        items: Array.from({ length: 5 }).map((_, i) => ({
+          id: `p2-${i + 1}`,
+          prompt: "",
+          userEN: "",
+          userJP: "",
+        })),
       },
       part3: {
         title: "Part 3｜会話ロールプレイ（4問）",
         instructions: "日本語のセリフを英訳しましょう。",
-        items: Array.from({ length: 4 }).map((_, i) => ({ id: `p3-${i + 1}`, scene: "", masayukiJP: "", masayukiEN: "" })),
+        items: Array.from({ length: 4 }).map((_, i) => ({
+          id: `p3-${i + 1}`,
+          scene: "",
+          masayukiJP: "",
+          masayukiEN: "",
+        })),
       },
       part4: {
         title: "Part 4｜英作文",
@@ -90,10 +125,20 @@ function newEmptyLesson(dateStr: string, themeLabel: string) {
 function hrMondayTemplate(dateStr: string) {
   const lesson = newEmptyLesson(dateStr, weekdayTheme[1].label);
   const p1Terms = [
-    "talk to friends / network", "look in the classifieds", "check Internet job sites", "write a resume",
-    "write a cover letter", "send in your resume and cover letter", "set up an interview", "get hired",
+    "talk to friends / network",
+    "look in the classifieds",
+    "check Internet job sites",
+    "write a resume",
+    "write a cover letter",
+    "send in your resume and cover letter",
+    "set up an interview",
+    "get hired",
   ];
-  lesson.parts.part1.items = p1Terms.map((t, i) => ({ id: `p1-${i + 1}`, term: t, answerJP: "" }));
+  lesson.parts.part1.items = p1Terms.map((t, i) => ({
+    id: `p1-${i + 1}`,
+    term: t,
+    answerJP: "",
+  }));
   const p2Prompts = [
     "I decided to ________ for new opportunities.",
     "She will ________ her resume tomorrow.",
@@ -101,12 +146,39 @@ function hrMondayTemplate(dateStr: string) {
     "They posted the job in the newspaper, so I will ________.",
     "After two interviews, I finally ________.",
   ];
-  lesson.parts.part2.items = p2Prompts.map((p, i) => ({ id: `p2-${i + 1}`, prompt: p, userEN: "", userJP: "" }));
+  lesson.parts.part2.items = p2Prompts.map((p, i) => ({
+    id: `p2-${i + 1}`,
+    prompt: p,
+    userEN: "",
+    userJP: "",
+  }));
   lesson.parts.part3.items = [
-    { id: "p3-1", scene: "採用面接：職務経験を尋ねる", masayukiJP: "本日はお時間ありがとうございます。以前の職務経験についてお話しします。", masayukiEN: "" },
-    { id: "p3-2", scene: "応募理由を確認する", masayukiJP: "履歴書を評価いただきありがとうございます。この職に応募した理由はスキルアップのためです。", masayukiEN: "" },
-    { id: "p3-3", scene: "二次面接の調整", masayukiJP: "はい、来週の平日午後5時以降でしたら面接に参加できます。", masayukiEN: "" },
-    { id: "p3-4", scene: "クロージング", masayukiJP: "ありがとうございます。採用されるように頑張ります。", masayukiEN: "" },
+    {
+      id: "p3-1",
+      scene: "採用面接：職務経験を尋ねる",
+      masayukiJP:
+        "本日はお時間ありがとうございます。以前の職務経験についてお話しします。",
+      masayukiEN: "",
+    },
+    {
+      id: "p3-2",
+      scene: "応募理由を確認する",
+      masayukiJP:
+        "履歴書を評価いただきありがとうございます。この職に応募した理由はスキルアップのためです。",
+      masayukiEN: "",
+    },
+    {
+      id: "p3-3",
+      scene: "二次面接の調整",
+      masayukiJP: "はい、来週の平日午後5時以降でしたら面接に参加できます。",
+      masayukiEN: "",
+    },
+    {
+      id: "p3-4",
+      scene: "クロージング",
+      masayukiJP: "ありがとうございます。採用されるように頑張ります。",
+      masayukiEN: "",
+    },
   ];
   return lesson;
 }
@@ -115,7 +187,10 @@ const clone = (o: any) => JSON.parse(JSON.stringify(o));
 
 export default function Page() {
   const [dateStr, setDateStr] = useState<string>(() => ymd(new Date()));
-  const weekday = useMemo(() => new Date(dateStr + "T00:00:00").getDay(), [dateStr]);
+  const weekday = useMemo(
+    () => new Date(dateStr + "T00:00:00").getDay(),
+    [dateStr]
+  );
   const theme = weekdayTheme[weekday];
 
   const [mode, setMode] = useState<"learner" | "trainer">("learner");
@@ -129,59 +204,87 @@ export default function Page() {
   const [pinConfirm, setPinConfirm] = useState("");
   const [pinOld, setPinOld] = useState("");
   const [pinError, setPinError] = useState("");
+
   const [showSubmitExport, setShowSubmitExport] = useState(false);
-
   const [showCalendar, setShowCalendar] = useState(false);
-// 未バックアップの変更がある場合だけ、離脱時に警告
-React.useEffect(() => {
-  const handler = (e: BeforeUnloadEvent) => {
-    if (!dirtySinceExport) return;
-    e.preventDefault();
-    e.returnValue = "";
-  };
-  window.addEventListener("beforeunload", handler);
-  return () => window.removeEventListener("beforeunload", handler);
-}, [dirtySinceExport]);
 
-const [importedThisSession, setImportedThisSession] = useState<boolean>(() => {
-    try { return localStorage.getItem(IMPORTED_THIS_SESSION_KEY) === "1"; } catch { return false; }
-  });
-  const [showImportGate, setShowImportGate] = useState<boolean>(() => !importedThisSession);
   // --- 未バックアップ検知（書き出し忘れ） ---
-const [dirtySinceExport, setDirtySinceExport] = useState<boolean>(false);
+  const [dirtySinceExport, setDirtySinceExport] = useState<boolean>(false);
 
-// store内の updatedAt の最大値（最新更新時刻）を返す
-function latestUpdatedAt(s: Record<string, any>): number {
-  let t = 0;
-  Object.values(s || {}).forEach((l: any) => {
-    const ts = Date.parse(l?.meta?.updatedAt || "");
-    if (!Number.isNaN(ts)) t = Math.max(t, ts);
+  // 離脱警告（dirty のときのみ）
+  React.useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!dirtySinceExport) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("beforeunload", handler);
+      return () => window.removeEventListener("beforeunload", handler);
+    }
+  }, [dirtySinceExport]);
+
+  // このセッションで取り込み済み？
+  const [importedThisSession, setImportedThisSession] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem(IMPORTED_THIS_SESSION_KEY) === "1";
+    } catch {
+      return false;
+    }
   });
-  return t;
-}
+  const [showImportGate, setShowImportGate] = useState<boolean>(
+    () => !importedThisSession
+  );
 
-// 初期判定：最後に書き出した時刻より新しい変更があれば dirty
-React.useEffect(() => {
-  try {
-    const last = Date.parse(localStorage.getItem(LAST_EXPORTED_AT_KEY) || "");
-    const latest = latestUpdatedAt(store);
-    setDirtySinceExport(Number.isNaN(last) ? (Object.keys(store || {}).length > 0) : latest > last);
-  } catch {
-    setDirtySinceExport(Object.keys(store || {}).length > 0);
+  // store内の updatedAt の最大値（最新更新時刻）
+  function latestUpdatedAt(s: Record<string, any>): number {
+    let t = 0;
+    Object.values(s || {}).forEach((l: any) => {
+      const ts = Date.parse(l?.meta?.updatedAt || "");
+      if (!Number.isNaN(ts)) t = Math.max(t, ts);
+    });
+    return t;
   }
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
 
-// storeが変わるたびに再判定
-React.useEffect(() => {
-  try {
-    const last = Date.parse(localStorage.getItem(LAST_EXPORTED_AT_KEY) || "");
-    const latest = latestUpdatedAt(store);
-    setDirtySinceExport(Number.isNaN(last) ? (Object.keys(store || {}).length > 0) : latest > last);
-  } catch {
-    setDirtySinceExport(Object.keys(store || {}).length > 0);
-  }
-}, [store]);
+  // 初期 dirty 判定
+  React.useEffect(() => {
+    try {
+      const last = Date.parse(
+        (typeof window !== "undefined" &&
+          localStorage.getItem(LAST_EXPORTED_AT_KEY)) ||
+          ""
+      );
+      const latest = latestUpdatedAt(store);
+      setDirtySinceExport(
+        Number.isNaN(last)
+          ? Object.keys(store || {}).length > 0
+          : latest > last
+      );
+    } catch {
+      setDirtySinceExport(Object.keys(store || {}).length > 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // store変更ごとに dirty 再判定
+  React.useEffect(() => {
+    try {
+      const last = Date.parse(
+        (typeof window !== "undefined" &&
+          localStorage.getItem(LAST_EXPORTED_AT_KEY)) ||
+          ""
+      );
+      const latest = latestUpdatedAt(store);
+      setDirtySinceExport(
+        Number.isNaN(last)
+          ? Object.keys(store || {}).length > 0
+          : latest > last
+      );
+    } catch {
+      setDirtySinceExport(Object.keys(store || {}).length > 0);
+    }
+  }, [store]);
 
   const currentLesson = useMemo(() => store[dateStr] ?? null, [store, dateStr]);
 
@@ -192,8 +295,12 @@ React.useEffect(() => {
 
   function createOrLoadTemplate() {
     const next = clone(store);
-    if (next[dateStr]) { alert("この日のレッスンは既に存在します。編集モードで修正してください。"); return; }
-    const newLesson = weekday === 1 ? hrMondayTemplate(dateStr) : newEmptyLesson(dateStr, theme.label);
+    if (next[dateStr]) {
+      alert("この日のレッスンは既に存在します。編集モードで修正してください。");
+      return;
+    }
+    const newLesson =
+      weekday === 1 ? hrMondayTemplate(dateStr) : newEmptyLesson(dateStr, theme.label);
     next[dateStr] = newLesson;
     updateStore(next);
     setDirtySinceExport(true);
@@ -228,41 +335,54 @@ React.useEffect(() => {
   }
 
   function exportJSON() {
-    const blob = new Blob([JSON.stringify(store, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(store, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    const month = (dateStr || new Date().toISOString().slice(0, 10)).slice(0, 7).replace("-", ""); // YYYYMM
+    const month = (dateStr || new Date().toISOString().slice(0, 10))
+      .slice(0, 7)
+      .replace("-", ""); // YYYYMM
     a.download = `${month}_annetmii_english_dictionary.json`;
     a.click();
     URL.revokeObjectURL(url);
-    try { localStorage.setItem(LAST_EXPORTED_AT_KEY, new Date().toISOString()); } catch {}
-setDirtySinceExport(false);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(LAST_EXPORTED_AT_KEY, new Date().toISOString());
+      }
+    } catch {}
+    setDirtySinceExport(false);
   }
 
   function importJSON(ev: React.ChangeEvent<HTMLInputElement>) {
-  const f = ev.target.files?.[0];
-  if (!f) return;
-  const r = new FileReader();
-  r.onload = () => {
-    try {
-      const parsed = JSON.parse(String(r.result || "{}"));
-      updateStore(parsed);
+    const f = ev.target.files?.[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
       try {
-        localStorage.setItem(IMPORTED_THIS_SESSION_KEY, "1"); // ★このセッションは読み込み済み
-      } catch {}
-      setImportedThisSession(true);
-      setShowImportGate(false);
-      alert("インポートが完了しました。");
-    } catch {
-      alert("JSONの読み込みに失敗しました。");
-    }
-  };
-  r.readAsText(f);
-}
+        const parsed = JSON.parse(String(r.result || "{}"));
+        updateStore(parsed);
+        try {
+          if (typeof window !== "undefined") {
+            localStorage.setItem(IMPORTED_THIS_SESSION_KEY, "1"); // このセッションは読み込み済み
+          }
+        } catch {}
+        setImportedThisSession(true);
+        setShowImportGate(false);
+        alert("インポートが完了しました。");
+      } catch {
+        alert("JSONの読み込みに失敗しました。");
+      }
+    };
+    r.readAsText(f);
+  }
 
-  const disabledForLearner = mode === "learner" && currentLesson?.meta?.status === "submitted";
-  function hasLesson(d: Date) { return Boolean(store[ymd(d)]); }
+  const disabledForLearner =
+    mode === "learner" && currentLesson?.meta?.status === "submitted";
+  function hasLesson(d: Date) {
+    return Boolean(store[ymd(d)]);
+  }
 
   return (
     <div className="min-h-screen w-full bg-white text-gray-900 p-3 sm:p-4 md:p-6 max-w-3xl mx-auto">
@@ -275,9 +395,7 @@ setDirtySinceExport(false);
           height={88}
           className="mb-2"
         />
-        <h1 className="text-2xl font-bold text-gray-900">
-          English Dictionary
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900">English Dictionary</h1>
       </div>
 
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b mb-3 sm:mb-4">
@@ -300,7 +418,9 @@ setDirtySinceExport(false);
                 if (v) {
                   const has = !!getPin();
                   setPinMode(has ? "verify" : "set");
-                  setPinInput(""); setPinConfirm(""); setPinOld("");
+                  setPinInput("");
+                  setPinConfirm("");
+                  setPinOld("");
                   setPinModalOpen(true);
                 } else {
                   setMode("learner");
@@ -326,10 +446,14 @@ setDirtySinceExport(false);
                   }}
                   prev2Label={null}
                   next2Label={null}
-                  tileClassName={({ date }) => hasLesson(date) ? "relative" : undefined}
-                  tileContent={({ date }) => hasLesson(date) ? (
-                    <span className="absolute left-1/2 -translate-x-1/2 mt-6 h-1.5 w-1.5 rounded-full bg-blue-500"></span>
-                  ) : null}
+                  tileClassName={({ date }) =>
+                    hasLesson(date) ? "relative" : undefined
+                  }
+                  tileContent={({ date }) =>
+                    hasLesson(date) ? (
+                      <span className="absolute left-1/2 -translate-x-1/2 mt-6 h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                    ) : null
+                  }
                 />
                 <div className="mt-2 text-xs text-gray-500 flex items-center gap-3">
                   <span className="inline-flex items-center gap-1">
@@ -345,14 +469,30 @@ setDirtySinceExport(false);
 
         <div className="flex flex-wrap items-center gap-2 pb-2">
           {mode === "trainer" && (
-            <Button size="sm" onClick={createOrLoadTemplate}>この日のレッスン作成</Button>
+            <Button size="sm" onClick={createOrLoadTemplate}>
+              この日のレッスン作成
+            </Button>
           )}
-          <Button size="sm" variant="outline" onClick={() => window.print()}>印刷 / PDF保存</Button>
-          <Button size="sm" variant="outline" onClick={exportJSON}>データ書き出し</Button>
+          <Button size="sm" variant="outline" onClick={() => window.print()}>
+            印刷 / PDF保存
+          </Button>
+          <Button size="sm" variant="outline" onClick={exportJSON}>
+            データ書き出し
+          </Button>
 
-          {/* 形を統一：隠しinputをButtonで起動 */}
-          <input id="data-import" type="file" accept="application/json" className="hidden" onChange={importJSON} />
-          <Button size="sm" variant="outline" onClick={() => document.getElementById('data-import')?.click()}>
+          {/* 隠し input を Button で起動 */}
+          <input
+            id="data-import"
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={importJSON}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => document.getElementById("data-import")?.click()}
+          >
             データ読み込み
           </Button>
         </div>
@@ -370,7 +510,10 @@ setDirtySinceExport(false);
             <Button
               size="sm"
               variant="outline"
-              onClick={() => { setPinMode("change"); setPinModalOpen(true); }}
+              onClick={() => {
+                setPinMode("change");
+                setPinModalOpen(true);
+              }}
             >
               PIN変更
             </Button>
@@ -383,68 +526,91 @@ setDirtySinceExport(false);
         )}
       </header>
 
-     {/* 最新データの読み込みを促す（このセッションで未読込） */}
-{!importedThisSession && (
-  <div className="mb-3 rounded-xl border border-blue-300 bg-blue-50 text-blue-900 p-3 flex items-center justify-between">
-    <div className="text-sm">
-      まず「データ読み込み」を実行してください（最新の出題・コメントを取り込みます）。
-    </div>
-    <Button
-      size="sm"
-      variant="outline"
-      onClick={() => document.getElementById('data-import')?.click()}
-    >
-      データ読み込み
-    </Button>
-  </div>
-)}
-{dirtySinceExport && (
-  <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 p-3 flex items-center justify-between">
-    <div className="text-sm">未バックアップの変更があります。「データ書き出し」で保存してください。</div>
-    <Button size="sm" onClick={exportJSON}>今すぐバックアップ</Button>
-  </div>
-)}
-      {/* ボタン以下の本文は少し大きめで表示 */}
+      {/* 起動時インポート促し */}
+      {!importedThisSession && (
+        <div className="mb-3 rounded-xl border border-blue-300 bg-blue-50 text-blue-900 p-3 flex items-center justify-between">
+          <div className="text-sm">
+            まず「データ読み込み」を実行してください（最新の出題・コメントを取り込みます）。
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => document.getElementById("data-import")?.click()}
+          >
+            データ読み込み
+          </Button>
+        </div>
+      )}
+
+      {/* 未バックアップ警告 */}
+      {dirtySinceExport && (
+        <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 p-3 flex items-center justify-between">
+          <div className="text-sm">
+            未バックアップの変更があります。「データ書き出し」で保存してください。
+          </div>
+          <Button size="sm" onClick={exportJSON}>
+            今すぐバックアップ
+          </Button>
+        </div>
+      )}
+
+      {/* 本文 */}
       <div className="text-[15px] sm:text-base">
         {!currentLesson ? (
           <EmptyState themeLabel={theme.label} />
         ) : (
           <div className="space-y-4">
-            <LessonMetaBar currentLesson={currentLesson} onStatusChange={setStatus} mode={mode} />
+            <LessonMetaBar
+              currentLesson={currentLesson}
+              onStatusChange={setStatus}
+              mode={mode}
+            />
 
             {/* 今日のテーマ */}
             <DayThemeEditor
               value={currentLesson.meta?.customTheme || ""}
               editable={mode === "trainer" && editMode}
               weekdayLabel={theme.label}
-              onChange={(v) => saveLesson({ meta: { ...(currentLesson.meta || {}), customTheme: v } })}
+              onChange={(v) =>
+                saveLesson({
+                  meta: { ...(currentLesson.meta || {}), customTheme: v },
+                })
+              }
             />
 
             <SectionPart1
               data={currentLesson.parts.part1}
               disabled={disabledForLearner}
-              onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part1: next } })}
+              onChange={(next) =>
+                saveLesson({ parts: { ...currentLesson.parts, part1: next } })
+              }
               editMode={mode === "trainer" && editMode}
             />
 
             <SectionPart2
               data={currentLesson.parts.part2}
               disabled={disabledForLearner}
-              onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part2: next } })}
+              onChange={(next) =>
+                saveLesson({ parts: { ...currentLesson.parts, part2: next } })
+              }
               editMode={mode === "trainer" && editMode}
             />
 
             <SectionPart3
               data={currentLesson.parts.part3}
               disabled={disabledForLearner}
-              onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part3: next } })}
+              onChange={(next) =>
+                saveLesson({ parts: { ...currentLesson.parts, part3: next } })
+              }
               editMode={mode === "trainer" && editMode}
             />
 
             <SectionPart4
               data={currentLesson.parts.part4}
               disabled={disabledForLearner}
-              onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part4: next } })}
+              onChange={(next) =>
+                saveLesson({ parts: { ...currentLesson.parts, part4: next } })
+              }
             />
 
             <TrainerFeedback
@@ -455,18 +621,27 @@ setDirtySinceExport(false);
 
             <BottomActions
               mode={mode}
-  lesson={currentLesson}
-  onSubmit={() => { setStatus("submitted"); setShowSubmitExport(true); }}
-  onReopen={() => setStatus("draft")}
-  onReturn={() => setStatus("returned")}
-  onConfirm={() => setStatus("confirmed")}
+              lesson={currentLesson}
+              onSubmit={() => {
+                setStatus("submitted");
+                setShowSubmitExport(true);
+              }}
+              onReopen={() => setStatus("draft")}
+              onReturn={() => setStatus("returned")}
+              onConfirm={() => setStatus("confirmed")}
             />
           </div>
         )}
       </div>
 
       {/* PINモーダル */}
-      <Dialog open={pinModalOpen} onOpenChange={(o) => { setPinModalOpen(o); if (!o) setPinError(""); }}>
+      <Dialog
+        open={pinModalOpen}
+        onOpenChange={(o) => {
+          setPinModalOpen(o);
+          if (!o) setPinError("");
+        }}
+      >
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
             <DialogTitle>
@@ -481,7 +656,13 @@ setDirtySinceExport(false);
             {pinMode === "change" && (
               <div className="grid gap-1.5">
                 <Label htmlFor="pinOld">現在のPIN</Label>
-                <Input id="pinOld" type="password" inputMode="numeric" value={pinOld} onChange={(e) => setPinOld(e.target.value)} />
+                <Input
+                  id="pinOld"
+                  type="password"
+                  inputMode="numeric"
+                  value={pinOld}
+                  onChange={(e) => setPinOld(e.target.value)}
+                />
               </div>
             )}
 
@@ -489,11 +670,23 @@ setDirtySinceExport(false);
               <>
                 <div className="grid gap-1.5">
                   <Label htmlFor="pinNew">新しいPIN</Label>
-                  <Input id="pinNew" type="password" inputMode="numeric" value={pinInput} onChange={(e) => setPinInput(e.target.value)} />
+                  <Input
+                    id="pinNew"
+                    type="password"
+                    inputMode="numeric"
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value)}
+                  />
                 </div>
                 <div className="grid gap-1.5">
                   <Label htmlFor="pinConfirm">新しいPIN（確認）</Label>
-                  <Input id="pinConfirm" type="password" inputMode="numeric" value={pinConfirm} onChange={(e) => setPinConfirm(e.target.value)} />
+                  <Input
+                    id="pinConfirm"
+                    type="password"
+                    inputMode="numeric"
+                    value={pinConfirm}
+                    onChange={(e) => setPinConfirm(e.target.value)}
+                  />
                 </div>
               </>
             )}
@@ -501,7 +694,13 @@ setDirtySinceExport(false);
             {pinMode === "verify" && (
               <div className="grid gap-1.5">
                 <Label htmlFor="pinVerify">PIN</Label>
-                <Input id="pinVerify" type="password" inputMode="numeric" value={pinInput} onChange={(e) => setPinInput(e.target.value)} />
+                <Input
+                  id="pinVerify"
+                  type="password"
+                  inputMode="numeric"
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                />
               </div>
             )}
 
@@ -525,8 +724,10 @@ setDirtySinceExport(false);
                 }
 
                 if (pinMode === "set") {
-                  if (!pinInput) return setPinError("新しいPINを入力してください。");
-                  if (pinInput !== pinConfirm) return setPinError("確認用PINが一致しません。");
+                  if (!pinInput)
+                    return setPinError("新しいPINを入力してください。");
+                  if (pinInput !== pinConfirm)
+                    return setPinError("確認用PINが一致しません。");
                   setPin(pinInput);
                   setMode("trainer");
                   setEditMode(true);
@@ -535,9 +736,12 @@ setDirtySinceExport(false);
                 }
 
                 if (pinMode === "change") {
-                  if (current && pinOld !== current) return setPinError("現在のPINが一致しません。");
-                  if (!pinInput) return setPinError("新しいPINを入力してください。");
-                  if (pinInput !== pinConfirm) return setPinError("確認用PINが一致しません。");
+                  if (current && pinOld !== current)
+                    return setPinError("現在のPINが一致しません。");
+                  if (!pinInput)
+                    return setPinError("新しいPINを入力してください。");
+                  if (pinInput !== pinConfirm)
+                    return setPinError("確認用PINが一致しません。");
                   setPin(pinInput);
                   setPinModalOpen(false);
                   return;
@@ -549,50 +753,67 @@ setDirtySinceExport(false);
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-{/* 提出後：書き出しの促し */}
-<Dialog open={showSubmitExport} onOpenChange={setShowSubmitExport}>
-  <DialogContent className="sm:max-w-[420px]">
-    <DialogHeader>
-      <DialogTitle>提出が完了しました</DialogTitle>
-      <DialogDescription>この内容を保存するため、「データ書き出し」を実行してください。</DialogDescription>
-    </DialogHeader>
-    <DialogFooter className="gap-2">
-      <Button variant="outline" onClick={() => setShowSubmitExport(false)}>あとで</Button>
-      <Button onClick={() => { setShowSubmitExport(false); exportJSON(); }}>
-        データ書き出し
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-      
+
+      {/* 提出後：書き出しの促し */}
+      <Dialog open={showSubmitExport} onOpenChange={setShowSubmitExport}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>提出が完了しました</DialogTitle>
+            <DialogDescription>
+              この内容を保存するため、「データ書き出し」を実行してください。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowSubmitExport(false)}>
+              あとで
+            </Button>
+            <Button
+              onClick={() => {
+                setShowSubmitExport(false);
+                exportJSON();
+              }}
+            >
+              データ書き出し
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <footer className="text-center text-xs text-gray-500 mt-10 pb-6">
         © {new Date().getFullYear()} annetmii - 学習を習慣に。
       </footer>
+
       {/* 起動ガード：まず読み込みを促す（スキップ可） */}
-<Dialog open={showImportGate} onOpenChange={(o) => setShowImportGate(o)}>
-  <DialogContent className="sm:max-w-[420px]">
-    <DialogHeader>
-      <DialogTitle>はじめに：データ読み込み</DialogTitle>
-      <DialogDescription>
-        最新の出題や講師コメントを取り込むため、まず「データ読み込み」を実行してください。
-      </DialogDescription>
-    </DialogHeader>
-    <div className="p-4 pt-0 text-sm text-gray-600">
-      すぐに学習を始めたい場合は「今回はスキップ」を選べます（青いリマインドが残ります）。
-    </div>
-    <DialogFooter className="gap-2">
-      <Button variant="outline" onClick={() => { setShowImportGate(false); /* スキップ */ }}>
-        今回はスキップ
-      </Button>
-      <Button onClick={() => {
-        document.getElementById('data-import')?.click();
-      }}>
-        データ読み込み
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+      <Dialog open={showImportGate} onOpenChange={(o) => setShowImportGate(o)}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>はじめに：データ読み込み</DialogTitle>
+            <DialogDescription>
+              最新の出題や講師コメントを取り込むため、まず「データ読み込み」を実行してください。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 pt-0 text-sm text-gray-600">
+            すぐに学習を始めたい場合は「今回はスキップ」を選べます（青いリマインドが残ります）。
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowImportGate(false); // スキップ
+              }}
+            >
+              今回はスキップ
+            </Button>
+            <Button
+              onClick={() => {
+                document.getElementById("data-import")?.click();
+              }}
+            >
+              データ読み込み
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -602,13 +823,22 @@ setDirtySinceExport(false);
 function EmptyState({ themeLabel }: { themeLabel: string }) {
   return (
     <div className="rounded-2xl border border-dashed p-4 bg-white text-[15px] sm:text-base">
-      <h3 className="text-lg font-semibold mb-2">アプリへようこそ — "annetmii English Dictionary"</h3>
+      <h3 className="text-lg font-semibold mb-2">
+        アプリへようこそ — "annetmii English Dictionary"
+      </h3>
       <div className="space-y-1">
-        <p>この日のレッスンは未作成です。以下のボタンからテンプレートを作成してください。</p>
+        <p>
+          この日のレッスンは未作成です。以下のボタンからテンプレートを作成してください。
+        </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>曜日テーマ：<span className="font-medium">{themeLabel}</span></li>
+          <li>
+            曜日テーマ：<span className="font-medium">{themeLabel}</span>
+          </li>
           <li>編集モードで問題の追加・削除・文言修正ができます。</li>
-          <li>Masayukiが「提出」→ Akiが「返却（講師コメント）」→ Masayukiが「確認済み」で完了。</li>
+          <li>
+            Masayukiが「提出」→ Akiが「返却（講師コメント）」→
+            Masayukiが「確認済み」で完了。
+          </li>
           <li>データは端末内に保存（JSON出力/読み込み対応）。</li>
         </ul>
       </div>
@@ -616,7 +846,15 @@ function EmptyState({ themeLabel }: { themeLabel: string }) {
   );
 }
 
-function LessonMetaBar({ currentLesson, onStatusChange, mode }: { currentLesson: any; onStatusChange: any; mode: "learner" | "trainer" }) {
+function LessonMetaBar({
+  currentLesson,
+  onStatusChange,
+  mode,
+}: {
+  currentLesson: any;
+  onStatusChange: any;
+  mode: "learner" | "trainer";
+}) {
   const s = currentLesson.meta?.status || "draft";
   const statusLabel: Record<string, string> = {
     draft: "下書き",
@@ -667,7 +905,17 @@ function DayThemeEditor({
   );
 }
 
-function SectionPart1({ data, onChange, disabled, editMode }: { data: any; onChange: (d: any) => void; disabled?: boolean; editMode?: boolean }) {
+function SectionPart1({
+  data,
+  onChange,
+  disabled,
+  editMode,
+}: {
+  data: any;
+  onChange: (d: any) => void;
+  disabled?: boolean;
+  editMode?: boolean;
+}) {
   function updateItem(i: number, patch: any) {
     const next = JSON.parse(JSON.stringify(data));
     next.items[i] = { ...next.items[i], ...patch };
@@ -692,8 +940,10 @@ function SectionPart1({ data, onChange, disabled, editMode }: { data: any; onCha
         <p className="text-base text-gray-900">{data.instructions}</p>
         <div className="space-y-2">
           {data.items.map((it: any, i: number) => (
-            <div key={it.id} className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
-              {/* 語彙は単一行・折り返しなし・学習者は編集不可だが濃い表示 */}
+            <div
+              key={it.id}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center"
+            >
               <Input
                 value={it.term}
                 readOnly={!editMode}
@@ -707,19 +957,50 @@ function SectionPart1({ data, onChange, disabled, editMode }: { data: any; onCha
                 onChange={(e) => updateItem(i, { answerJP: e.target.value })}
                 placeholder="日本語訳を入力"
                 className={
-                  (it.colorJP === "green" ? "bg-green-100 " :
-                   it.colorJP === "orange" ? "bg-orange-100 " :
-                   it.colorJP === "red" ? "bg-red-100 " : "") + ""
+                  (it.colorJP === "green"
+                    ? "bg-green-100 "
+                    : it.colorJP === "orange"
+                    ? "bg-orange-100 "
+                    : it.colorJP === "red"
+                    ? "bg-red-100 "
+                    : "") + ""
                 }
               />
               {editMode && (
                 <>
                   <div className="sm:col-span-2 flex items-center gap-1">
                     <span className="text-xs text-gray-600">評価：</span>
-                    <Button size="sm" className="bg-green-200 hover:bg-green-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "green" })}>正解</Button>
-                    <Button size="sm" className="bg-orange-200 hover:bg-orange-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "orange" })}>惜しい！</Button>
-                    <Button size="sm" className="bg-red-200 hover:bg-red-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "red" })}>間違い</Button>
-                    <Button size="sm" variant="outline" onClick={() => updateItem(i, { colorJP: "" })}>クリア</Button>
+                    <Button
+                      size="sm"
+                      className="bg-green-200 hover:bg-green-300"
+                      variant="ghost"
+                      onClick={() => updateItem(i, { colorJP: "green" })}
+                    >
+                      正解
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-orange-200 hover:bg-orange-300"
+                      variant="ghost"
+                      onClick={() => updateItem(i, { colorJP: "orange" })}
+                    >
+                      惜しい！
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-red-200 hover:bg-red-300"
+                      variant="ghost"
+                      onClick={() => updateItem(i, { colorJP: "red" })}
+                    >
+                      間違い
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateItem(i, { colorJP: "" })}
+                    >
+                      クリア
+                    </Button>
                   </div>
                   <div className="sm:col-span-2 flex justify-end">
                     <Button onClick={() => removeItem(i)}>削除</Button>
@@ -739,7 +1020,17 @@ function SectionPart1({ data, onChange, disabled, editMode }: { data: any; onCha
   );
 }
 
-function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onChange: (d: any) => void; disabled?: boolean; editMode?: boolean }) {
+function SectionPart2({
+  data,
+  onChange,
+  disabled,
+  editMode,
+}: {
+  data: any;
+  onChange: (d: any) => void;
+  disabled?: boolean;
+  editMode?: boolean;
+}) {
   function updateItem(i: number, patch: any) {
     const next = JSON.parse(JSON.stringify(data));
     next.items[i] = { ...next.items[i], ...patch };
@@ -747,7 +1038,12 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
   }
   function addItem() {
     const next = JSON.parse(JSON.stringify(data));
-    next.items.push({ id: `p2-${Date.now()}`, prompt: "", userEN: "", userJP: "" });
+    next.items.push({
+      id: `p2-${Date.now()}`,
+      prompt: "",
+      userEN: "",
+      userJP: "",
+    });
     onChange(next);
   }
   function removeItem(i: number) {
@@ -779,9 +1075,13 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
                   onChange={(e) => updateItem(i, { userEN: e.target.value })}
                   placeholder="英語の解答（穴埋め文）"
                   className={
-                    (it.colorEN === "green" ? "bg-green-100 " :
-                     it.colorEN === "orange" ? "bg-orange-100 " :
-                     it.colorEN === "red" ? "bg-red-100 " : "") + ""
+                    (it.colorEN === "green"
+                      ? "bg-green-100 "
+                      : it.colorEN === "orange"
+                      ? "bg-orange-100 "
+                      : it.colorEN === "red"
+                      ? "bg-red-100 "
+                      : "") + ""
                   }
                 />
                 <Textarea
@@ -790,9 +1090,13 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
                   onChange={(e) => updateItem(i, { userJP: e.target.value })}
                   placeholder="日本語訳"
                   className={
-                    (it.colorJP === "green" ? "bg-green-100 " :
-                     it.colorJP === "orange" ? "bg-orange-100 " :
-                     it.colorJP === "red" ? "bg-red-100 " : "") + ""
+                    (it.colorJP === "green"
+                      ? "bg-green-100 "
+                      : it.colorJP === "orange"
+                      ? "bg-orange-100 "
+                      : it.colorJP === "red"
+                      ? "bg-red-100 "
+                      : "") + ""
                   }
                 />
               </div>
@@ -801,17 +1105,71 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
                   <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
                     <div className="flex items-center gap-1">
                       <span>EN評価：</span>
-                      <Button size="sm" className="bg-green-200 hover:bg-green-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "green" })}>正解</Button>
-                      <Button size="sm" className="bg-orange-200 hover:bg-orange-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "orange" })}>惜しい！</Button>
-                      <Button size="sm" className="bg-red-200 hover:bg-red-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "red" })}>間違い</Button>
-                      <Button size="sm" variant="outline" onClick={() => updateItem(i, { colorEN: "" })}>クリア</Button>
+                      <Button
+                        size="sm"
+                        className="bg-green-200 hover:bg-green-300"
+                        variant="ghost"
+                        onClick={() => updateItem(i, { colorEN: "green" })}
+                      >
+                        正解
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-orange-200 hover:bg-orange-300"
+                        variant="ghost"
+                        onClick={() => updateItem(i, { colorEN: "orange" })}
+                      >
+                        惜しい！
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-red-200 hover:bg-red-300"
+                        variant="ghost"
+                        onClick={() => updateItem(i, { colorEN: "red" })}
+                      >
+                        間違い
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateItem(i, { colorEN: "" })}
+                      >
+                        クリア
+                      </Button>
                     </div>
                     <div className="flex items-center gap-1">
                       <span>JP評価：</span>
-                      <Button size="sm" className="bg-green-200 hover:bg-green-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "green" })}>正解</Button>
-                      <Button size="sm" className="bg-orange-200 hover:bg-orange-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "orange" })}>惜しい！</Button>
-                      <Button size="sm" className="bg-red-200 hover:bg-red-300" variant="ghost" onClick={() => updateItem(i, { colorJP: "red" })}>間違い</Button>
-                      <Button size="sm" variant="outline" onClick={() => updateItem(i, { colorJP: "" })}>クリア</Button>
+                      <Button
+                        size="sm"
+                        className="bg-green-200 hover:bg-green-300"
+                        variant="ghost"
+                        onClick={() => updateItem(i, { colorJP: "green" })}
+                      >
+                        正解
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-orange-200 hover:bg-orange-300"
+                        variant="ghost"
+                        onClick={() => updateItem(i, { colorJP: "orange" })}
+                      >
+                        惜しい！
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-red-200 hover:bg-red-300"
+                        variant="ghost"
+                        onClick={() => updateItem(i, { colorJP: "red" })}
+                      >
+                        間違い
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateItem(i, { colorJP: "" })}
+                      >
+                        クリア
+                      </Button>
                     </div>
                   </div>
                   <div className="flex justify-end">
@@ -832,7 +1190,17 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
   );
 }
 
-function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onChange: (d: any) => void; disabled?: boolean; editMode?: boolean }) {
+function SectionPart3({
+  data,
+  onChange,
+  disabled,
+  editMode,
+}: {
+  data: any;
+  onChange: (d: any) => void;
+  disabled?: boolean;
+  editMode?: boolean;
+}) {
   function updateItem(i: number, patch: any) {
     const next = JSON.parse(JSON.stringify(data));
     next.items[i] = { ...next.items[i], ...patch };
@@ -840,7 +1208,12 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
   }
   function addItem() {
     const next = JSON.parse(JSON.stringify(data));
-    next.items.push({ id: `p3-${Date.now()}`, scene: "", masayukiJP: "", masayukiEN: "" });
+    next.items.push({
+      id: `p3-${Date.now()}`,
+      scene: "",
+      masayukiJP: "",
+      masayukiEN: "",
+    });
     onChange(next);
   }
   function removeItem(i: number) {
@@ -880,9 +1253,13 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
                   onChange={(e) => updateItem(i, { masayukiEN: e.target.value })}
                   placeholder="↑の英訳を入力"
                   className={
-                    (it.colorEN === "green" ? "bg-green-100 " :
-                     it.colorEN === "orange" ? "bg-orange-100 " :
-                     it.colorEN === "red" ? "bg-red-100 " : "") + ""
+                    (it.colorEN === "green"
+                      ? "bg-green-100 "
+                      : it.colorEN === "orange"
+                      ? "bg-orange-100 "
+                      : it.colorEN === "red"
+                      ? "bg-red-100 "
+                      : "") + ""
                   }
                 />
               </div>
@@ -890,10 +1267,37 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
                 <>
                   <div className="flex items-center gap-1 text-xs text-gray-600">
                     <span>EN評価：</span>
-                    <Button size="sm" className="bg-green-200 hover:bg-green-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "green" })}>正解</Button>
-                    <Button size="sm" className="bg-orange-200 hover:bg-orange-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "orange" })}>惜しい！</Button>
-                    <Button size="sm" className="bg-red-200 hover:bg-red-300" variant="ghost" onClick={() => updateItem(i, { colorEN: "red" })}>間違い</Button>
-                    <Button size="sm" variant="outline" onClick={() => updateItem(i, { colorEN: "" })}>クリア</Button>
+                    <Button
+                      size="sm"
+                      className="bg-green-200 hover:bg-green-300"
+                      variant="ghost"
+                      onClick={() => updateItem(i, { colorEN: "green" })}
+                    >
+                      正解
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-orange-200 hover:bg-orange-300"
+                      variant="ghost"
+                      onClick={() => updateItem(i, { colorEN: "orange" })}
+                    >
+                      惜しい！
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-red-200 hover:bg-red-300"
+                      variant="ghost"
+                      onClick={() => updateItem(i, { colorEN: "red" })}
+                    >
+                      間違い
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateItem(i, { colorEN: "" })}
+                    >
+                      クリア
+                    </Button>
                   </div>
                   <div className="flex justify-end">
                     <Button onClick={() => removeItem(i)}>削除</Button>
@@ -913,7 +1317,15 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
   );
 }
 
-function SectionPart4({ data, onChange, disabled }: { data: any; onChange: (d: any) => void; disabled?: boolean }) {
+function SectionPart4({
+  data,
+  onChange,
+  disabled,
+}: {
+  data: any;
+  onChange: (d: any) => void;
+  disabled?: boolean;
+}) {
   return (
     <div className="rounded-2xl border bg-white">
       <div className="p-4 border-b">
@@ -933,110 +1345,3 @@ function SectionPart4({ data, onChange, disabled }: { data: any; onChange: (d: a
   );
 }
 
-function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: any) => void; mode: "learner" | "trainer" }) {
-  const canEdit = mode === "trainer";
-
-  // 赤/黒の選択を localStorage から復元（保存先キーは既に先頭で宣言した COMMENT_COLOR_KEY を使用）
-  const [commentColor, setCommentColor] = useState<"black" | "red">(() => {
-    try {
-      const saved = localStorage.getItem(COMMENT_COLOR_KEY);
-      return (saved === "red" || saved === "black") ? (saved as "black" | "red") : "black";
-    } catch {
-      return "black";
-    }
-  });
-  const applyColor = (c: "black" | "red") => {
-    setCommentColor(c);
-    try { localStorage.setItem(COMMENT_COLOR_KEY, c); } catch {}
-  };
-
-  // iOS/Safari 対策：実テキストがある時だけインライン色を当てる
-  const textColorHex = commentColor === "red" ? "#dc2626" /* red-600 */ : "#111827" /* gray-900 */;
-
-  // 空欄判定と色ヘルパー（空欄なら色を当てない→placeholderが薄グレーのまま）
-  const isEmpty = (v: any) => !String(v ?? "").trim().length;
-  const clsFor = (has: boolean) =>
-    (has ? (commentColor === "red" ? "text-red-600" : "text-gray-900") : "") + " placeholder:text-gray-400";
-  const styleFor = (has: boolean) => has ? ({ color: textColorHex, WebkitTextFillColor: textColorHex } as React.CSSProperties) : undefined;
-
-  return (
-    <div className="rounded-2xl border bg-white">
-      <div className="p-4 border-b">
-        <h3 className="text-lg font-semibold">Trainer Feedback（講師コメント）</h3>
-      </div>
-      <div className="p-4 space-y-3">
-        {canEdit && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-600">文字色：</span>
-            <Button size="sm" variant={commentColor === "black" ? "default" : "outline"} onClick={() => applyColor("black")}>黒文字</Button>
-            <Button size="sm" variant={commentColor === "red" ? "default" : "outline"} onClick={() => applyColor("red")}>赤文字</Button>
-            <span className="text-gray-400">（※色は見た目のみ。データには保存されません）</span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <Textarea
-            value={data.part1}
-            onChange={(e) => onChange({ ...data, part1: e.target.value })}
-            readOnly={!canEdit}
-            placeholder="Part 1へのコメント"
-            className={clsFor(!isEmpty(data.part1))}
-            style={styleFor(!isEmpty(data.part1))}
-          />
-          <Textarea
-            value={data.part2}
-            onChange={(e) => onChange({ ...data, part2: e.target.value })}
-            readOnly={!canEdit}
-            placeholder="Part 2へのコメント"
-            className={clsFor(!isEmpty(data.part2))}
-            style={styleFor(!isEmpty(data.part2))}
-          />
-          <Textarea
-            value={data.part3}
-            onChange={(e) => onChange({ ...data, part3: e.target.value })}
-            readOnly={!canEdit}
-            placeholder="Part 3へのコメント"
-            className={clsFor(!isEmpty(data.part3))}
-            style={styleFor(!isEmpty(data.part3))}
-          />
-          <Textarea
-            value={data.part4}
-            onChange={(e) => onChange({ ...data, part4: e.target.value })}
-            readOnly={!canEdit}
-            placeholder="Part 4へのコメント"
-            className={clsFor(!isEmpty(data.part4))}
-            style={styleFor(!isEmpty(data.part4))}
-          />
-        </div>
-
-        <Textarea
-          value={data.overall}
-          onChange={(e) => onChange({ ...data, overall: e.target.value })}
-          readOnly={!canEdit}
-          placeholder="総評（全体へのフィードバック）"
-          className={`min-h-[100px] ${clsFor(!isEmpty(data.overall))}`}
-          style={styleFor(!isEmpty(data.overall))}
-        />
-      </div>
-    </div>
-  );
-}
-
-function BottomActions({ mode, lesson, onSubmit, onReopen, onReturn, onConfirm }: { mode: "learner" | "trainer"; lesson: any; onSubmit: () => void; onReopen: () => void; onReturn: () => void; onConfirm: () => void }) {
-  const status = lesson.meta?.status || "draft";
-  return (
-    <div className="sticky bottom-2">
-      <div className="rounded-2xl border bg-white shadow-lg">
-        <div className="p-4 py-3 flex flex-wrap gap-2 items-center justify-between">
-          <div className="text-xs text-gray-600">最終更新：{new Date(lesson.meta?.updatedAt || Date.now()).toLocaleString()}</div>
-          <div className="flex items-center gap-2">
-            {mode === "learner" && status === "draft" && (<Button onClick={onSubmit}>提出</Button>)}
-            {mode === "learner" && status === "submitted" && (<Button onClick={onReopen}>編集再開</Button>)}
-            {mode === "trainer" && status === "submitted" && (<Button onClick={onReturn}>返却（コメント付き）</Button>)}
-            {mode === "learner" && status === "returned" && (<Button onClick={onConfirm}>確認済みにする</Button>)}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
