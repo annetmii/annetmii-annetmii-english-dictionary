@@ -5,7 +5,6 @@ import React, { useMemo, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,10 +14,9 @@ import { Label } from "@/components/ui/label";
 
 const APP_KEY = "annetmii-English-Dictionary-v1";
 const PIN_KEY = `${APP_KEY}::trainer_pin`;
-const COMMENT_COLOR_KEY = `${APP_KEY}::comment_color`; 
-const LAST_EXPORTED_AT_KEY = `${APP_KEY}::last_exported_at`; 
+const LAST_EXPORTED_AT_KEY = `${APP_KEY}::last_exported_at`;
 
-// ここから：青バナーの文脈管理（sessionStorage 使用）
+// 青バナーの文脈管理（sessionStorage 使用）
 const SS_KEYS = {
   loadedLessonKey: `${APP_KEY}::loaded_lesson_key`,
   loadedAt: `${APP_KEY}::loaded_at_iso`,
@@ -63,7 +61,7 @@ function newEmptyLesson(dateStr: string, themeLabel: string) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: "draft" as "draft" | "submitted" | "returned" | "confirmed",
-      customTheme: "", // 今日のテーマ
+      customTheme: "",
     },
     parts: {
       part1: {
@@ -117,6 +115,72 @@ function hrMondayTemplate(dateStr: string) {
 
 const clone = (o: any) => JSON.parse(JSON.stringify(o));
 
+// --- 講師コメント：パート直下のインライン編集/表示 ---
+function PartFeedbackInline({
+  label,
+  value,
+  canEdit,
+  onSave,
+}: {
+  label: string;
+  value: string;
+  canEdit: boolean;
+  onSave: (v: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState<string>(value || "");
+
+  React.useEffect(() => {
+    setText(value || "");
+  }, [value]);
+
+  // 学習者には、コメントが空なら何も表示しない
+  if (!canEdit && !String(value || "").trim()) return null;
+
+  return (
+    <div className="mx-0 sm:mx-0">
+      {/* ヘッダー行（右上に導線） */}
+      <div className="flex items-center justify-between px-4">
+        <div className="text-sm font-medium text-gray-700">講師コメント（{label}）</div>
+        {canEdit && !editing && (
+          <button
+            type="button"
+            className="text-xs text-blue-600 underline"
+            onClick={() => setEditing(true)}
+          >
+            {String(value || "").trim() ? "編集" : "コメントを書く"}
+          </button>
+        )}
+      </div>
+
+      {/* 表示 or 編集 */}
+      <div className="p-4 pt-2">
+        {editing && canEdit ? (
+          <div className="space-y-2">
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={`${label} へのコメント`}
+              className="min-h-[80px]"
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => { setEditing(false); setText(value || ""); }}>キャンセル</Button>
+              <Button onClick={() => { onSave(text); setEditing(false); }}>保存</Button>
+            </div>
+          </div>
+        ) : (
+          String(value || "").trim() ? (
+            <div className="rounded-xl border bg-white p-3 text-[15px] whitespace-pre-wrap">{value}</div>
+          ) : (
+            canEdit ? (<div className="text-xs text-gray-400">※ まだコメントはありません。</div>) : null
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   const [dateStr, setDateStr] = useState<string>(() => ymd(new Date()));
   const weekday = useMemo(() => new Date(dateStr + "T00:00:00").getDay(), [dateStr]);
@@ -169,8 +233,8 @@ export default function Page() {
       const loadedLessonKey = sessionStorage.getItem(SS_KEYS.loadedLessonKey);
       const loadedAtISO = sessionStorage.getItem(SS_KEYS.loadedAt);
       const need =
-        loadedLessonKey !== lessonKey   // 別日/別レッスンに切り替えた
-        || isStale(loadedAtISO, 30);    // 鮮度切れ（30分 or 日付越え）
+        loadedLessonKey !== lessonKey ||
+        isStale(loadedAtISO, 30);
       setShowLoadPrompt(need);
     } catch {
       setShowLoadPrompt(true);
@@ -186,9 +250,7 @@ export default function Page() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [lessonKey]);
 
-  // ===== 黄バナー：未バックアップ検知（書き出し忘れ） =====
-
-  // store内の updatedAt の最大値（最新更新時刻）を返す
+  // ===== 黄バナー：未バックアップ検知 =====
   function latestUpdatedAt(s: Record<string, any>): number {
     let t = 0;
     Object.values(s || {}).forEach((l: any) => {
@@ -198,7 +260,6 @@ export default function Page() {
     return t;
   }
 
-  // 初期判定：最後に書き出した時刻より新しい変更があれば dirty
   React.useEffect(() => {
     try {
       const last = Date.parse(localStorage.getItem(LAST_EXPORTED_AT_KEY) || "");
@@ -210,7 +271,6 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // storeが変わるたびに再判定
   React.useEffect(() => {
     try {
       const last = Date.parse(localStorage.getItem(LAST_EXPORTED_AT_KEY) || "");
@@ -234,7 +294,7 @@ export default function Page() {
     const newLesson = weekday === 1 ? hrMondayTemplate(dateStr) : newEmptyLesson(dateStr, theme.label);
     next[dateStr] = newLesson;
     updateStore(next);
-    setDirtySinceExport(true); // 作成＝未バックアップ
+    setDirtySinceExport(true);
   }
 
   function saveLesson(partial: any) {
@@ -251,7 +311,6 @@ export default function Page() {
       },
     };
     updateStore(next);
-    // 編集＝未バックアップ
     setDirtySinceExport(true);
   }
 
@@ -266,7 +325,6 @@ export default function Page() {
   function setStatus(status: "draft" | "submitted" | "returned" | "confirmed") {
     if (!currentLesson) return;
     saveLesson({ meta: { ...(currentLesson.meta || {}), status } });
-    // 提出/確認などの操作も確定までは未バックアップ扱い（黄を確実に点灯）
     setDirtySinceExport(true);
   }
 
@@ -291,14 +349,12 @@ export default function Page() {
       try {
         const parsed = JSON.parse(String(r.result || "{}"));
         updateStore(parsed);
-
         // 読み込み成功 → 文脈のロード記録を更新し、青バナーを消す
         try {
           sessionStorage.setItem(SS_KEYS.loadedLessonKey, lessonKey);
           sessionStorage.setItem(SS_KEYS.loadedAt, new Date().toISOString());
         } catch {}
         setShowLoadPrompt(false);
-
         alert("インポートが完了しました。");
       } catch {
         alert("JSONの読み込みに失敗しました。");
@@ -396,7 +452,7 @@ export default function Page() {
           <Button size="sm" variant="outline" onClick={() => window.print()}>印刷 / PDF保存</Button>
           <Button size="sm" variant="outline" onClick={exportJSON}>データ書き出し</Button>
 
-          {/* 形を統一：隠しinputをButtonで起動 */}
+          {/* 隠しinputをButtonで起動 */}
           <input id="data-import" type="file" accept="application/json" className="hidden" onChange={importJSON} />
           <Button size="sm" variant="outline" onClick={() => document.getElementById('data-import')?.click()}>
             データ読み込み
@@ -420,22 +476,20 @@ export default function Page() {
         </div>
       )}
 
-      {/* 黄：未バックアップ */}
+      {/* 黄：未バックアップ（ボタンは置かず上部の書き出しを利用） */}
       {dirtySinceExport && (
-  <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 p-3">
-    <div className="text-sm">
-      未バックアップの変更があります。「データ書き出し」で保存してください。
-    </div>
-  </div>
-)}
+        <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 p-3">
+          <div className="text-sm">未バックアップの変更があります。「データ書き出し」で保存してください。</div>
+        </div>
+      )}
 
-      {/* ボタン以下の本文は少し大きめで表示 */}
+      {/* 本文 */}
       <div className="text-[15px] sm:text-base">
         {!currentLesson ? (
           <EmptyState themeLabel={theme.label} />
         ) : (
           <div className="space-y-4">
-            <LessonMetaBar currentLesson={currentLesson} onStatusChange={setStatus} mode={mode} />
+            <LessonMetaBar currentLesson={currentLesson} />
 
             {/* 今日のテーマ */}
             <DayThemeEditor
@@ -445,39 +499,70 @@ export default function Page() {
               onChange={(v) => saveLesson({ meta: { ...(currentLesson.meta || {}), customTheme: v } })}
             />
 
+            {/* Part 1 */}
             <SectionPart1
               data={currentLesson.parts.part1}
               disabled={disabledForLearner}
               onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part1: next } })}
               editMode={mode === "trainer" && editMode}
             />
+            <PartFeedbackInline
+              label="Part 1"
+              value={currentLesson.feedback?.part1 || ""}
+              canEdit={mode === "trainer"}
+              onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, part1: v } })}
+            />
 
+            {/* Part 2 */}
             <SectionPart2
               data={currentLesson.parts.part2}
               disabled={disabledForLearner}
               onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part2: next } })}
               editMode={mode === "trainer" && editMode}
             />
+            <PartFeedbackInline
+              label="Part 2"
+              value={currentLesson.feedback?.part2 || ""}
+              canEdit={mode === "trainer"}
+              onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, part2: v } })}
+            />
 
+            {/* Part 3 */}
             <SectionPart3
               data={currentLesson.parts.part3}
               disabled={disabledForLearner}
               onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part3: next } })}
               editMode={mode === "trainer" && editMode}
             />
+            <PartFeedbackInline
+              label="Part 3"
+              value={currentLesson.feedback?.part3 || ""}
+              canEdit={mode === "trainer"}
+              onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, part3: v } })}
+            />
 
+            {/* Part 4 */}
             <SectionPart4
               data={currentLesson.parts.part4}
               disabled={disabledForLearner}
               onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part4: next } })}
             />
-
-            <TrainerFeedback
-              data={currentLesson.feedback}
-              mode={mode}
-              onChange={(fb) => saveLesson({ feedback: fb })}
+            <PartFeedbackInline
+              label="Part 4"
+              value={currentLesson.feedback?.part4 || ""}
+              canEdit={mode === "trainer"}
+              onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, part4: v } })}
             />
 
+            {/* Overall（任意：必要なら活かす） */}
+            <PartFeedbackInline
+              label="総評"
+              value={currentLesson.feedback?.overall || ""}
+              canEdit={mode === "trainer"}
+              onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, overall: v } })}
+            />
+
+            {/* 下部アクション */}
             <BottomActions
               mode={mode}
               lesson={currentLesson}
@@ -579,7 +664,7 @@ export default function Page() {
         © {new Date().getFullYear()} annetmii - 学習を習慣に。
       </footer>
 
-      {/* 起動ガード：最初に読み込みを促す。スキップも可能（スキップ後も青バナーは残る） */}
+      {/* 起動ガード：最初に読み込みを促す。スキップも可能（スキップ後も青バナーは上部に残る） */}
       <Dialog open={showLoadPrompt} onOpenChange={(o) => setShowLoadPrompt(o)}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
@@ -592,7 +677,7 @@ export default function Page() {
             すぐに学習を始めたい場合は「今回はスキップ」を選べます（青いリマインドが残ります）。
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setShowLoadPrompt(false); /* スキップ：青バナーは上部に残る */ }}>
+            <Button variant="outline" onClick={() => { setShowLoadPrompt(false); }}>
               今回はスキップ
             </Button>
             <Button onClick={() => {
@@ -626,7 +711,7 @@ function EmptyState({ themeLabel }: { themeLabel: string }) {
   );
 }
 
-function LessonMetaBar({ currentLesson, onStatusChange, mode }: { currentLesson: any; onStatusChange: any; mode: "learner" | "trainer" }) {
+function LessonMetaBar({ currentLesson }: { currentLesson: any; }) {
   const s = currentLesson.meta?.status || "draft";
   const statusLabel: Record<string, string> = {
     draft: "下書き",
@@ -667,7 +752,7 @@ function DayThemeEditor({
       <div className="p-4">
         <Textarea
           value={value}
-          readOnly={!editable} // 講師のみ編集可／常に濃い表示
+          readOnly={!editable}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Picture Dictionaryの「Job Search」（p.173）を参考に学びましょう。"
           className="min-h-[80px] leading-6"
@@ -872,7 +957,7 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
                 readOnly={!editMode}
                 onChange={(e) => updateItem(i, { scene: e.target.value })}
                 placeholder="シーン（編集モードで修正） 例：二次面接の調整"
-                className="minハ-[60px] leading-6"
+                className="min-h-[60px] leading-6"
               />
               <div className="grid grid-cols-1 gap-2">
                 <Textarea
@@ -923,7 +1008,7 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
 
 function SectionPart4({ data, onChange, disabled }: { data: any; onChange: (d: any) => void; disabled?: boolean }) {
   return (
-    <div className="rounded-2xl border bg白">
+    <div className="rounded-2xl border bg-white">
       <div className="p-4 border-b">
         <h3 className="text-lg font-semibold">{data.title}</h3>
       </div>
@@ -935,91 +1020,6 @@ function SectionPart4({ data, onChange, disabled }: { data: any; onChange: (d: a
           onChange={(e) => onChange({ ...data, content: e.target.value })}
           placeholder="自由英作文"
           className="min-h-[140px]"
-        />
-      </div>
-    </div>
-  );
-}
-
-function TrainerFeedback({ data, onChange, mode }: { data: any; onChange: (d: any) => void; mode: "learner" | "trainer" }) {
-  const canEdit = mode === "trainer";
-
-  const [commentColor, setCommentColor] = useState<"black" | "red">(() => {
-    try {
-      const saved = localStorage.getItem(COMMENT_COLOR_KEY);
-      return (saved === "red" || saved === "black") ? (saved as "black" | "red") : "black";
-    } catch {
-      return "black";
-    }
-  });
-  const applyColor = (c: "black" | "red") => {
-    setCommentColor(c);
-    try { localStorage.setItem(COMMENT_COLOR_KEY, c); } catch {}
-  };
-
-  const textColorHex = commentColor === "red" ? "#dc2626" : "#111827";
-  const isEmpty = (v: any) => !String(v ?? "").trim().length;
-  const clsFor = (has: boolean) =>
-    (has ? (commentColor === "red" ? "text-red-600" : "text-gray-900") : "") + " placeholder:text-gray-400";
-  const styleFor = (has: boolean) => has ? ({ color: textColorHex, WebkitTextFillColor: textColorHex } as React.CSSProperties) : undefined;
-
-  return (
-    <div className="rounded-2xl border bg-white">
-      <div className="p-4 border-b">
-        <h3 className="text-lg font-semibold">Trainer Feedback（講師コメント）</h3>
-      </div>
-      <div className="p-4 space-y-3">
-        {canEdit && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-600">文字色：</span>
-            <Button size="sm" variant={commentColor === "black" ? "default" : "outline"} onClick={() => applyColor("black")}>黒文字</Button>
-            <Button size="sm" variant={commentColor === "red" ? "default" : "outline"} onClick={() => applyColor("red")}>赤文字</Button>
-            <span className="text-gray-400">（※色は見た目のみ。データには保存されません）</span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <Textarea
-            value={data.part1}
-            onChange={(e) => onChange({ ...data, part1: e.target.value })}
-            readOnly={!canEdit}
-            placeholder="Part 1へのコメント"
-            className={clsFor(!isEmpty(data.part1))}
-            style={styleFor(!isEmpty(data.part1))}
-          />
-          <Textarea
-            value={data.part2}
-            onChange={(e) => onChange({ ...data, part2: e.target.value })}
-            readOnly={!canEdit}
-            placeholder="Part 2へのコメント"
-            className={clsFor(!isEmpty(data.part2))}
-            style={styleFor(!isEmpty(data.part2))}
-          />
-          <Textarea
-            value={data.part3}
-            onChange={(e) => onChange({ ...data, part3: e.target.value })}
-            readOnly={!canEdit}
-            placeholder="Part 3へのコメント"
-            className={clsFor(!isEmpty(data.part3))}
-            style={styleFor(!isEmpty(data.part3))}
-          />
-          <Textarea
-            value={data.part4}
-            onChange={(e) => onChange({ ...data, part4: e.target.value })}
-            readOnly={!canEdit}
-            placeholder="Part 4へのコメント"
-            className={clsFor(!isEmpty(data.part4))}
-            style={styleFor(!isEmpty(data.part4))}
-          />
-        </div>
-
-        <Textarea
-          value={data.overall}
-          onChange={(e) => onChange({ ...data, overall: e.target.value })}
-          readOnly={!canEdit}
-          placeholder="総評（全体へのフィードバック）"
-          className={`min-h-[100px] ${clsFor(!isEmpty(data.overall))}`}
-          style={styleFor(!isEmpty(data.overall))}
         />
       </div>
     </div>
