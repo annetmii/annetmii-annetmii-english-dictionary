@@ -450,11 +450,11 @@ export default function Page() {
             <Button size="sm" onClick={createOrLoadTemplate}>この日のレッスン作成</Button>
           )}
           <Button size="sm" variant="outline" onClick={() => window.print()}>印刷 / PDF保存</Button>
-          <Button size="sm" variant="outline" onClick={exportJSON}>データ書き出し</Button>
+          <Button size="sm" className="bg-black text-white hover:bg-gray-800" onClick={exportJSON}>データ書き出し</Button>
 
           {/* 隠しinputをButtonで起動 */}
           <input id="data-import" type="file" accept="application/json" className="hidden" onChange={importJSON} />
-          <Button size="sm" variant="outline" onClick={() => document.getElementById('data-import')?.click()}>
+          <Button size="sm" className="bg-black text-white hover:bg-gray-800" onClick={() => document.getElementById('data-import')?.click()}>
             データ読み込み
           </Button>
         </div>
