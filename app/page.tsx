@@ -422,11 +422,12 @@ export default function Page() {
 
       {/* 黄：未バックアップ */}
       {dirtySinceExport && (
-        <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 p-3 flex items-center justify-between">
-          <div className="text-sm">未バックアップの変更があります。「データ書き出し」で保存してください。</div>
-          <Button size="sm" onClick={exportJSON}>今すぐバックアップ</Button>
-        </div>
-      )}
+  <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 p-3">
+    <div className="text-sm">
+      未バックアップの変更があります。「データ書き出し」で保存してください。
+    </div>
+  </div>
+)}
 
       {/* ボタン以下の本文は少し大きめで表示 */}
       <div className="text-[15px] sm:text-base">
