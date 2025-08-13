@@ -131,6 +131,15 @@ export default function Page() {
   const [pinError, setPinError] = useState("");
 
   const [showCalendar, setShowCalendar] = useState(false);
+  // ページ離脱時の書き出し忘れ防止（常に警告を出す）
+React.useEffect(() => {
+  const handler = (e: BeforeUnloadEvent) => {
+    e.preventDefault();
+    e.returnValue = "";
+  };
+  window.addEventListener("beforeunload", handler);
+  return () => window.removeEventListener("beforeunload", handler);
+}, []);
 const [importedThisSession, setImportedThisSession] = useState<boolean>(() => {
     try { return localStorage.getItem(IMPORTED_THIS_SESSION_KEY) === "1"; } catch { return false; }
   });
