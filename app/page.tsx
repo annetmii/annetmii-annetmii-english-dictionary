@@ -15,7 +15,9 @@ import { Label } from "@/components/ui/label";
 
 const APP_KEY = "annetmii-English-Dictionary-v1";
 const PIN_KEY = `${APP_KEY}::trainer_pin`;
-const COMMENT_COLOR_KEY = `${APP_KEY}::comment_color`;
+const COMMENT_COLOR_KEY = `${APP_KEY}::comment_color`; 
+const LAST_EXPORTED_AT_KEY = `${APP_KEY}::last_exported_at`; 
+const IMPORTED_THIS_SESSION_KEY = `${APP_KEY}::imported_this_session`; 
 
 const weekdayTheme: Record<number, { key: string; label: string }> = {
   0: { key: "seasonal", label: "Seasonal（季節・イベント・行事）" },
@@ -129,7 +131,10 @@ export default function Page() {
   const [pinError, setPinError] = useState("");
 
   const [showCalendar, setShowCalendar] = useState(false);
-
+const [importedThisSession, setImportedThisSession] = useState<boolean>(() => {
+    try { return localStorage.getItem(IMPORTED_THIS_SESSION_KEY) === "1"; } catch { return false; }
+  });
+  const [showImportGate, setShowImportGate] = useState<boolean>(() => !importedThisSession);
   const currentLesson = useMemo(() => store[dateStr] ?? null, [store, dateStr]);
 
   function updateStore(next: Record<string, any>) {
@@ -185,20 +190,25 @@ export default function Page() {
   }
 
   function importJSON(ev: React.ChangeEvent<HTMLInputElement>) {
-    const f = ev.target.files?.[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
+  const f = ev.target.files?.[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const parsed = JSON.parse(String(r.result || "{}"));
+      updateStore(parsed);
       try {
-        const parsed = JSON.parse(String(r.result || "{}"));
-        updateStore(parsed);
-        alert("インポートが完了しました。");
-      } catch {
-        alert("JSONの読み込みに失敗しました。");
-      }
-    };
-    r.readAsText(f);
-  }
+        localStorage.setItem(IMPORTED_THIS_SESSION_KEY, "1"); // ★このセッションは読み込み済み
+      } catch {}
+      setImportedThisSession(true);
+      setShowImportGate(false);
+      alert("インポートが完了しました。");
+    } catch {
+      alert("JSONの読み込みに失敗しました。");
+    }
+  };
+  r.readAsText(f);
+}
 
   const disabledForLearner = mode === "learner" && currentLesson?.meta?.status === "submitted";
   function hasLesson(d: Date) { return Boolean(store[ymd(d)]); }
@@ -321,6 +331,22 @@ export default function Page() {
           </div>
         )}
       </header>
+
+     {/* 最新データの読み込みを促す（このセッションで未読込） */}
+{!importedThisSession && (
+  <div className="mb-3 rounded-xl border border-blue-300 bg-blue-50 text-blue-900 p-3 flex items-center justify-between">
+    <div className="text-sm">
+      まず「データ読み込み」を実行してください（最新の出題・コメントを取り込みます）。
+    </div>
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => document.getElementById('data-import')?.click()}
+    >
+      データ読み込み
+    </Button>
+  </div>
+)}
 
       {/* ボタン以下の本文は少し大きめで表示 */}
       <div className="text-[15px] sm:text-base">
@@ -471,6 +497,30 @@ export default function Page() {
       <footer className="text-center text-xs text-gray-500 mt-10 pb-6">
         © {new Date().getFullYear()} annetmii - 学習を習慣に。
       </footer>
+      {/* 起動ガード：まず読み込みを促す（スキップ可） */}
+<Dialog open={showImportGate} onOpenChange={(o) => setShowImportGate(o)}>
+  <DialogContent className="sm:max-w-[420px]">
+    <DialogHeader>
+      <DialogTitle>はじめに：データ読み込み</DialogTitle>
+      <DialogDescription>
+        最新の出題や講師コメントを取り込むため、まず「データ読み込み」を実行してください。
+      </DialogDescription>
+    </DialogHeader>
+    <div className="p-4 pt-0 text-sm text-gray-600">
+      すぐに学習を始めたい場合は「今回はスキップ」を選べます（青いリマインドが残ります）。
+    </div>
+    <DialogFooter className="gap-2">
+      <Button variant="outline" onClick={() => { setShowImportGate(false); /* スキップ */ }}>
+        今回はスキップ
+      </Button>
+      <Button onClick={() => {
+        document.getElementById('data-import')?.click();
+      }}>
+        データ読み込み
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
     </div>
   );
 }
