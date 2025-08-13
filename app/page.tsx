@@ -129,21 +129,60 @@ export default function Page() {
   const [pinConfirm, setPinConfirm] = useState("");
   const [pinOld, setPinOld] = useState("");
   const [pinError, setPinError] = useState("");
+  const [showSubmitExport, setShowSubmitExport] = useState(false);
 
   const [showCalendar, setShowCalendar] = useState(false);
-  // ページ離脱時の書き出し忘れ防止（常に警告を出す）
+// 未バックアップの変更がある場合だけ、離脱時に警告
 React.useEffect(() => {
   const handler = (e: BeforeUnloadEvent) => {
+    if (!dirtySinceExport) return;
     e.preventDefault();
     e.returnValue = "";
   };
   window.addEventListener("beforeunload", handler);
   return () => window.removeEventListener("beforeunload", handler);
-}, []);
+}, [dirtySinceExport]);
+
 const [importedThisSession, setImportedThisSession] = useState<boolean>(() => {
     try { return localStorage.getItem(IMPORTED_THIS_SESSION_KEY) === "1"; } catch { return false; }
   });
   const [showImportGate, setShowImportGate] = useState<boolean>(() => !importedThisSession);
+  // --- 未バックアップ検知（書き出し忘れ） ---
+const [dirtySinceExport, setDirtySinceExport] = useState<boolean>(false);
+
+// store内の updatedAt の最大値（最新更新時刻）を返す
+function latestUpdatedAt(s: Record<string, any>): number {
+  let t = 0;
+  Object.values(s || {}).forEach((l: any) => {
+    const ts = Date.parse(l?.meta?.updatedAt || "");
+    if (!Number.isNaN(ts)) t = Math.max(t, ts);
+  });
+  return t;
+}
+
+// 初期判定：最後に書き出した時刻より新しい変更があれば dirty
+React.useEffect(() => {
+  try {
+    const last = Date.parse(localStorage.getItem(LAST_EXPORTED_AT_KEY) || "");
+    const latest = latestUpdatedAt(store);
+    setDirtySinceExport(Number.isNaN(last) ? (Object.keys(store || {}).length > 0) : latest > last);
+  } catch {
+    setDirtySinceExport(Object.keys(store || {}).length > 0);
+  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+// storeが変わるたびに再判定
+React.useEffect(() => {
+  try {
+    const last = Date.parse(localStorage.getItem(LAST_EXPORTED_AT_KEY) || "");
+    const latest = latestUpdatedAt(store);
+    setDirtySinceExport(Number.isNaN(last) ? (Object.keys(store || {}).length > 0) : latest > last);
+  } catch {
+    setDirtySinceExport(Object.keys(store || {}).length > 0);
+  }
+}, [store]);
+
   const currentLesson = useMemo(() => store[dateStr] ?? null, [store, dateStr]);
 
   function updateStore(next: Record<string, any>) {
@@ -157,6 +196,7 @@ const [importedThisSession, setImportedThisSession] = useState<boolean>(() => {
     const newLesson = weekday === 1 ? hrMondayTemplate(dateStr) : newEmptyLesson(dateStr, theme.label);
     next[dateStr] = newLesson;
     updateStore(next);
+    setDirtySinceExport(true);
   }
 
   function saveLesson(partial: any) {
@@ -196,6 +236,8 @@ const [importedThisSession, setImportedThisSession] = useState<boolean>(() => {
     a.download = `${month}_annetmii_english_dictionary.json`;
     a.click();
     URL.revokeObjectURL(url);
+    try { localStorage.setItem(LAST_EXPORTED_AT_KEY, new Date().toISOString()); } catch {}
+setDirtySinceExport(false);
   }
 
   function importJSON(ev: React.ChangeEvent<HTMLInputElement>) {
@@ -356,7 +398,12 @@ const [importedThisSession, setImportedThisSession] = useState<boolean>(() => {
     </Button>
   </div>
 )}
-
+{dirtySinceExport && (
+  <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 p-3 flex items-center justify-between">
+    <div className="text-sm">未バックアップの変更があります。「データ書き出し」で保存してください。</div>
+    <Button size="sm" onClick={exportJSON}>今すぐバックアップ</Button>
+  </div>
+)}
       {/* ボタン以下の本文は少し大きめで表示 */}
       <div className="text-[15px] sm:text-base">
         {!currentLesson ? (
@@ -408,11 +455,11 @@ const [importedThisSession, setImportedThisSession] = useState<boolean>(() => {
 
             <BottomActions
               mode={mode}
-              lesson={currentLesson}
-              onSubmit={() => setStatus("submitted")}
-              onReopen={() => setStatus("draft")}
-              onReturn={() => setStatus("returned")}
-              onConfirm={() => setStatus("confirmed")}
+  lesson={currentLesson}
+  onSubmit={() => { setStatus("submitted"); setShowSubmitExport(true); }}
+  onReopen={() => setStatus("draft")}
+  onReturn={() => setStatus("returned")}
+  onConfirm={() => setStatus("confirmed")}
             />
           </div>
         )}
@@ -502,7 +549,23 @@ const [importedThisSession, setImportedThisSession] = useState<boolean>(() => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+      
+{/* 提出後：書き出しの促し */}
+<Dialog open={showSubmitExport} onOpenChange={setShowSubmitExport}>
+  <DialogContent className="sm:max-w-[420px]">
+    <DialogHeader>
+      <DialogTitle>提出が完了しました</DialogTitle>
+      <DialogDescription>この内容を保存するため、「データ書き出し」を実行してください。</DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="gap-2">
+      <Button variant="outline" onClick={() => setShowSubmitExport(false)}>あとで</Button>
+      <Button onClick={() => { setShowSubmitExport(false); exportJSON(); }}>
+        データ書き出し
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+      
       <footer className="text-center text-xs text-gray-500 mt-10 pb-6">
         © {new Date().getFullYear()} annetmii - 学習を習慣に。
       </footer>
