@@ -478,7 +478,7 @@ export default function Page() {
 
       {/* 黄：未バックアップ（ボタンは置かず上部の書き出しを利用） */}
       {dirtySinceExport && (
-        <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 p-3">
+        <div className="fixed top-0 left-0 w-full z-50 border border-amber-300 bg-amber-50 text-amber-900 p-3 shadow">
           <div className="text-sm">未バックアップの変更があります。「データ書き出し」で保存してください。</div>
         </div>
       )}
