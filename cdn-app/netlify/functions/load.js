@@ -23,27 +23,28 @@ async function fetchFromGitHub() {
 
 exports.handler = async (event) => {
   try {
-    if (!GITHUB_TOKEN) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Missing GITHUB_TOKEN' }) };
-    }
+    if (!GITHUB_TOKEN) return { statusCode: 500, body: JSON.stringify({ error: 'Missing GITHUB_TOKEN' }) };
     const url = new URL(event.rawUrl || `https://${event.headers.host}${event.path}${event.rawQuery ? '?' + event.rawQuery : ''}`);
-    const user = url.searchParams.get('user') || ''; // 任意
     const date = url.searchParams.get('date') || '';
     if (!date) return { statusCode: 400, body: JSON.stringify({ error: 'date is required' }) };
 
     const { json } = await fetchFromGitHub();
 
-    // スキーマ互換：優先度 v2(users[user][date]) -> v1([user][date]) -> v0([date])
-    let hit = null;
-    if (user && json?.users?.[user]?.[date]) hit = json.users[user][date];
-    else if (user && json?.[user]?.[date]) hit = json[user][date];
-    else if (json?.[date]) hit = json[date];
+    // 互換：v2(users.*.*) / v1(user.*.*) / v0([date])
+    if (json?.[date]) {
+      return { statusCode: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(json[date] || {}) };
+    }
+    // v1/v2 も探す
+    if (json?.users && typeof json.users === 'object') {
+      for (const user of Object.keys(json.users)) {
+        if (json.users[user]?.[date]) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(json.users[user][date]) };
+      }
+    }
+    for (const user of Object.keys(json || {})) {
+      if (json[user]?.[date]) return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(json[user][date]) };
+    }
 
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-      body: JSON.stringify(hit || {}),
-    };
+    return { statusCode: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify({}) };
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ error: String(e?.message || e) }) };
   }
