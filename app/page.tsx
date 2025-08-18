@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label";
 
 const APP_KEY = "annetmii-English-Dictionary-v1";
 const PIN_KEY = `${APP_KEY}::trainer_pin`;
-const LAST_EXPORTED_AT_KEY = `${APP_KEY}::last_exported_at`;
 
 // 青バナーの文脈管理（sessionStorage 使用）
 const SS_KEYS = {
@@ -203,19 +202,8 @@ export default function Page() {
   const [pinError, setPinError] = useState("");
 
   const [showCalendar, setShowCalendar] = useState(false);
-
-  // ===== 離脱ガード（未バックアップなら警告） =====
-  React.useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (!dirtySinceExport) return;
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [dirtySinceExport]);
-
-  // ===== 青バナー：読み込み促しの評価 =====
+  
+// ===== 青バナー：読み込み促しの評価 =====
   const lessonKey = dateStr; // 文脈キー：当日のレッスンID相当
 
   function isStale(loadedAtISO: string | null, maxMinutes = 30) {
@@ -249,119 +237,6 @@ export default function Page() {
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [lessonKey]);
-
-  // ===== 黄バナー：未バックアップ検知 =====
-  function latestUpdatedAt(s: Record<string, any>): number {
-    let t = 0;
-    Object.values(s || {}).forEach((l: any) => {
-      const ts = Date.parse(l?.meta?.updatedAt || "");
-      if (!Number.isNaN(ts)) t = Math.max(t, ts);
-    });
-    return t;
-  }
-
-  React.useEffect(() => {
-    try {
-      const last = Date.parse(localStorage.getItem(LAST_EXPORTED_AT_KEY) || "");
-      const latest = latestUpdatedAt(store);
-      setDirtySinceExport(Number.isNaN(last) ? (Object.keys(store || {}).length > 0) : latest > last);
-    } catch {
-      setDirtySinceExport(Object.keys(store || {}).length > 0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  React.useEffect(() => {
-    try {
-      const last = Date.parse(localStorage.getItem(LAST_EXPORTED_AT_KEY) || "");
-      const latest = latestUpdatedAt(store);
-      setDirtySinceExport(Number.isNaN(last) ? (Object.keys(store || {}).length > 0) : latest > last);
-    } catch {
-      setDirtySinceExport(Object.keys(store || {}).length > 0);
-    }
-  }, [store]);
-
-  const currentLesson = useMemo(() => store[dateStr] ?? null, [store, dateStr]);
-
-  function updateStore(next: Record<string, any>) {
-    setStore(next);
-    saveAll(next);
-  }
-
-  function createOrLoadTemplate() {
-    const next = clone(store);
-    if (next[dateStr]) { alert("この日のレッスンは既に存在します。編集モードで修正してください。"); return; }
-    const newLesson = weekday === 1 ? hrMondayTemplate(dateStr) : newEmptyLesson(dateStr, theme.label);
-    next[dateStr] = newLesson;
-    updateStore(next);
-    setDirtySinceExport(true);
-  }
-
-  function saveLesson(partial: any) {
-    const next = clone(store);
-    next[dateStr] = {
-      ...(next[dateStr] ?? newEmptyLesson(dateStr, theme.label)),
-      ...partial,
-      meta: {
-        ...((next[dateStr] ?? {}).meta || {}),
-        ...(partial.meta || {}),
-        date: dateStr,
-        theme: theme.label,
-        updatedAt: new Date().toISOString(),
-      },
-    };
-    updateStore(next);
-    setDirtySinceExport(true);
-  }
-
-  function removeLesson() {
-    if (!confirm("この日のレッスンを削除します。よろしいですか？")) return;
-    const next = clone(store);
-    delete next[dateStr];
-    updateStore(next);
-    setDirtySinceExport(true);
-  }
-
-  function setStatus(status: "draft" | "submitted" | "returned" | "confirmed") {
-    if (!currentLesson) return;
-    saveLesson({ meta: { ...(currentLesson.meta || {}), status } });
-    setDirtySinceExport(true);
-  }
-
-  function exportJSON() {
-    const blob = new Blob([JSON.stringify(store, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const month = (dateStr || new Date().toISOString().slice(0, 10)).slice(0, 7).replace("-", ""); // YYYYMM
-    a.download = `${month}_annetmii_english_dictionary.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    try { localStorage.setItem(LAST_EXPORTED_AT_KEY, new Date().toISOString()); } catch {}
-    setDirtySinceExport(false);
-  }
-
-  function importJSON(ev: React.ChangeEvent<HTMLInputElement>) {
-    const f = ev.target.files?.[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      try {
-        const parsed = JSON.parse(String(r.result || "{}"));
-        updateStore(parsed);
-        // 読み込み成功 → 文脈のロード記録を更新し、青バナーを消す
-        try {
-          sessionStorage.setItem(SS_KEYS.loadedLessonKey, lessonKey);
-          sessionStorage.setItem(SS_KEYS.loadedAt, new Date().toISOString());
-        } catch {}
-        setShowLoadPrompt(false);
-        alert("インポートが完了しました。");
-      } catch {
-        alert("JSONの読み込みに失敗しました。");
-      }
-    };
-    r.readAsText(f);
-  }
 
   const disabledForLearner = mode === "learner" && currentLesson?.meta?.status === "submitted";
   function hasLesson(d: Date) { return Boolean(store[ymd(d)]); }
@@ -450,38 +325,8 @@ export default function Page() {
             <Button size="sm" onClick={createOrLoadTemplate}>この日のレッスン作成</Button>
           )}
           <Button size="sm" variant="outline" onClick={() => window.print()}>印刷 / PDF保存</Button>
-          <Button size="sm" className="bg-black text-white hover:bg-gray-800" onClick={exportJSON}>データ書き出し</Button>
-
-          {/* 隠しinputをButtonで起動 */}
-          <input id="data-import" type="file" accept="application/json" className="hidden" onChange={importJSON} />
-          <Button size="sm" className="bg-black text-white hover:bg-gray-800" onClick={() => document.getElementById('data-import')?.click()}>
-            データ読み込み
-          </Button>
         </div>
       </header>
-
-      {/* 青：最新データの読み込みを促す（文脈が未ロード/鮮度切れなら表示） */}
-      {showLoadPrompt && (
-        <div className="mb-3 rounded-xl border border-blue-300 bg-blue-50 text-blue-900 p-3 flex items-center justify-between">
-          <div className="text-sm">
-            まず「データ読み込み」を実行してください（最新の出題・コメントを取り込みます）。
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => document.getElementById('data-import')?.click()}
-          >
-            データ読み込み
-          </Button>
-        </div>
-      )}
-
-      {/* 黄：未バックアップ（ボタンは置かず上部の書き出しを利用） */}
-      {dirtySinceExport && (
-        <div className="sticky top-[56px] z-40 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 shadow">
-  保存が必要です。「データ書き出し」で保存してください。
-</div>
-      )}
 
       {/* 本文 */}
       <div className="text-[15px] sm:text-base">
@@ -564,12 +409,12 @@ export default function Page() {
 
             {/* 下部アクション */}
             <BottomActions
-              mode={mode}
+             mode={mode}
               lesson={currentLesson}
-              onSubmit={() => { setStatus("submitted"); setDirtySinceExport(true); }}
+              onSubmit={() => { setStatus("submitted"); /* 旧：提出後の書き出し促しは無し */ }}
               onReopen={() => setStatus("draft")}
               onReturn={() => setStatus("returned")}
-              onConfirm={() => { setStatus("confirmed"); setDirtySinceExport(true); }}
+              onConfirm={() => setStatus("confirmed")}
             />
           </div>
         )}
@@ -663,31 +508,6 @@ export default function Page() {
       <footer className="text-center text-xs text-gray-500 mt-10 pb-6">
         © {new Date().getFullYear()} annetmii - 学習を習慣に。
       </footer>
-
-      {/* 起動ガード：最初に読み込みを促す。スキップも可能（スキップ後も青バナーは上部に残る） */}
-      <Dialog open={showLoadPrompt} onOpenChange={(o) => setShowLoadPrompt(o)}>
-        <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>はじめに：データ読み込み</DialogTitle>
-            <DialogDescription>
-              最新の出題や講師コメントを取り込むため、まず「データ読み込み」を実行してください。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-4 pt-0 text-sm text-gray-600">
-            すぐに学習を始めたい場合は「今回はスキップ」を選べます（青いリマインドが残ります）。
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setShowLoadPrompt(false); }}>
-              今回はスキップ
-            </Button>
-            <Button onClick={() => {
-              document.getElementById('data-import')?.click();
-            }}>
-              データ読み込み
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
