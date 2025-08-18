@@ -21,8 +21,14 @@
 <body>
   <div id="root" class="container"></div>
 
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script type="module" src="./app.jsx"></script>
+    <!-- React (UMD) を先にグローバルへ読み込み -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <!-- JSXをその場で変換するために Babel Standalone を使う（小規模用途向け） -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- app.jsx は JSX のまま読み込む。Babel が実行時に変換してくれる -->
+  <script type="text/babel" data-presets="env,react" src="./app.jsx"></script>
 </body>
 </html>
