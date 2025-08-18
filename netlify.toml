@@ -5,5 +5,6 @@
 [functions]
   directory = "netlify/functions"
 
+# Next.js 用プラグイン（入れておくと無難）
 [[plugins]]
   package = "@netlify/plugin-nextjs"
