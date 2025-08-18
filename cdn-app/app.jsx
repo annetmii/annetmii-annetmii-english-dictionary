@@ -63,6 +63,65 @@ function newEmptyLesson(dateStr) {
     feedback: { overall: "", part1: "", part2: "", part3: "", part4: "" },
   };
 }
+function ensureShape(data, dateStr) {
+  const base = newEmptyLesson(dateStr);
+  const d = data || {};
+
+  // meta
+  const meta = {
+    ...base.meta,
+    ...(d.meta || {}),
+    date: dateStr,
+    updatedAt: (d.meta && d.meta.updatedAt) || nowIso(),
+    status: (d.meta && d.meta.status) || "draft",
+    title: (d.meta && d.meta.title) || `${dateStr} Lesson`,
+  };
+
+  // parts
+  const p = d.parts || {};
+  const part1 = p.part1 || {};
+  const part2 = p.part2 || {};
+  const part3 = p.part3 || {};
+  const part4 = p.part4 || {};
+
+  const safe = (arr, fallback) => Array.isArray(arr) ? arr : fallback;
+
+  const parts = {
+    part1: {
+      ...base.parts.part1,
+      ...part1,
+      items: safe(part1.items, base.parts.part1.items),
+    },
+    part2: {
+      ...base.parts.part2,
+      ...part2,
+      items: safe(part2.items, base.parts.part2.items),
+    },
+    part3: {
+      ...base.parts.part3,
+      ...part3,
+      items: safe(part3.items, base.parts.part3.items),
+    },
+    part4: {
+      ...base.parts.part4,
+      ...part4,
+      content: typeof part4.content === "string" ? part4.content : "",
+    },
+  };
+
+  // feedback
+  const feedback = {
+    ...base.feedback,
+    ...(d.feedback || {}),
+    overall: typeof (d.feedback && d.feedback.overall) === "string" ? d.feedback.overall : "",
+    part1: typeof (d.feedback && d.feedback.part1) === "string" ? d.feedback.part1 : "",
+    part2: typeof (d.feedback && d.feedback.part2) === "string" ? d.feedback.part2 : "",
+    part3: typeof (d.feedback && d.feedback.part3) === "string" ? d.feedback.part3 : "",
+    part4: typeof (d.feedback && d.feedback.part4) === "string" ? d.feedback.part4 : "",
+  };
+
+  return { meta, parts, feedback };
+}
 
 // ====== App ======
 const { useEffect, useRef, useState } = React;
@@ -70,7 +129,7 @@ const { useEffect, useRef, useState } = React;
 function App() {
   const [user, setUser] = useState(() => localStorage.getItem(LS.user) || "");
   const [dateStr, setDateStr] = useState(() => todayStr());
-  const [store, setStore] = useState(() => (loadLocal()[todayStr()] || newEmptyLesson(todayStr())));
+  const [store, setStore] = useState(() => ensureShape(loadLocal()[todayStr()], todayStr()));
   const [loading, setLoading] = useState(false);
   const [dirty, setDirty] = useState(false);
   const idleTimer = useRef(null);
@@ -96,16 +155,16 @@ function App() {
       try {
         const res = await cloudLoad({ user, date: dateStr });
         if (res.ok && res.data) {
-          setStore(res.data);
+          setStore(ensureShape(res.data, dateStr));
         } else {
           const local = loadLocal();
-          setStore(local[dateStr] || newEmptyLesson(dateStr));
+          setStore(ensureShape(local[dateStr], dateStr));
         }
         setDirty(false);
       } catch (e) {
         console.error(e);
         const local = loadLocal();
-        setStore(local[dateStr] || newEmptyLesson(dateStr));
+        setStore(ensureShape(local[dateStr], dateStr));
       } finally { setLoading(false); }
     })();
   }, [user, dateStr]);
