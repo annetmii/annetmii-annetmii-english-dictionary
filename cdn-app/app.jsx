@@ -23,7 +23,7 @@ const LS = {
   cache: `${APP_KEY}::cache`,
   lastSyncedAt: `${APP_KEY}::last_sync`,
 };
-const IDLE_MS = 60_000; // 入力停止60秒で自動同期
+const IDLE_MS = 60000;  // 入力停止60秒で自動同期
 
 // ====== Utils ======
 const ymd = (d) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString().slice(0, 10);
