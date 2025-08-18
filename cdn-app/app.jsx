@@ -8,8 +8,7 @@ class ErrorBoundary extends React.Component {
   render(){
     if(this.state.error){
       return React.createElement('div',{style:{background:'#fee2e2',color:'#991b1b',padding:12,border:'1px solid #fecaca',borderRadius:12,margin:'12px 0',fontFamily:'monospace',whiteSpace:'pre-wrap'}},
-        '⚠️ アプリ内エラー:
-', String(this.state.error)
+        '⚠️ アプリ内エラー:\n' + String(this.state.error)
       );
     }
     return this.props.children;
