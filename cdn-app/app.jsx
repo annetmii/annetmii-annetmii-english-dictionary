@@ -1,5 +1,21 @@
 /* global React, ReactDOM */
 
+// ===== Error boundary (画面真っ白の原因を可視化) =====
+class ErrorBoundary extends React.Component {
+  constructor(props){super(props); this.state={error:null}};
+  static getDerivedStateFromError(error){return {error}};
+  componentDidCatch(error, info){console.error(error, info);} 
+  render(){
+    if(this.state.error){
+      return React.createElement('div',{style:{background:'#fee2e2',color:'#991b1b',padding:12,border:'1px solid #fecaca',borderRadius:12,margin:'12px 0',fontFamily:'monospace',whiteSpace:'pre-wrap'}},
+        '⚠️ アプリ内エラー:
+', String(this.state.error)
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ====== App constants ======
 const APP_KEY = "no-build-english-dict-v1";
 const LS = {
@@ -87,7 +103,8 @@ function App() {
           setStore(local[dateStr] || newEmptyLesson(dateStr));
         }
         setDirty(false);
-      } catch {
+      } catch (e) {
+        console.error(e);
         const local = loadLocal();
         setStore(local[dateStr] || newEmptyLesson(dateStr));
       } finally { setLoading(false); }
@@ -121,198 +138,143 @@ function App() {
 
   // ====== Render ======
   return (
-    <div>
-      {/* Header */}
-      <div className="card" style={{ margin: "8px 0", padding: "10px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <img src="./logo.png" alt="logo" width="44" height="44" />
-            <div>
-              <div style={{ fontWeight: 700 }}>English Dictionary</div>
-              <div className="label">日付：{dateStr} ／ ステータス：{store.meta.status}</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="label">学習者</span>
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={mode === "trainer"}
-                onChange={(e) => setMode(e.target.checked ? "trainer" : "learner")}
-              />
-              <span className="label">講師</span>
-            </label>
-          </div>
-        </div>
-      </div>
+    React.createElement(React.Fragment, null,
+      React.createElement('div', { className: 'card', style: { margin: '8px 0', padding: '10px 12px' } },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' } },
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+            React.createElement('img', { src: './logo.png', alt: 'logo', width: 44, height: 44 }),
+            React.createElement('div', null,
+              React.createElement('div', { style: { fontWeight: 700 } }, 'English Dictionary'),
+              React.createElement('div', { className: 'label' }, `日付：${dateStr} ／ ステータス：${store.meta.status}`)
+            )
+          ),
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+            React.createElement('span', { className: 'label' }, '学習者'),
+            React.createElement('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' } },
+              React.createElement('input', {
+                type: 'checkbox',
+                checked: mode === 'trainer',
+                onChange: (e) => setMode(e.target.checked ? 'trainer' : 'learner')
+              }),
+              React.createElement('span', { className: 'label' }, '講師')
+            )
+          )
+        )
+      ),
 
-      {/* Controls */}
-      <div className="card" style={{ margin: "8px 0", padding: "10px 12px" }}>
-        <div className="row">
-          <div style={{ flex: 1, minWidth: 240 }}>
-            <div className="label">あなたの名前（初回のみ）</div>
-            <input
-              className="input"
-              placeholder="例）Masayuki"
-              value={user}
-              onChange={(e) => {
-                const v = e.target.value.trim();
-                setUser(v);
-                localStorage.setItem(LS.user, v);
-              }}
-            />
-          </div>
-          <div>
-            <div className="label">日付</div>
-            <input type="date" className="input" value={dateStr} onChange={(e) => setDateStr(e.target.value)} />
-          </div>
-          <button className="btn" onClick={handleSubmit} disabled={loading}>
-            {loading ? "同期中..." : "送信（同期）"}
-          </button>
-        </div>
-      </div>
+      React.createElement('div', { className: 'card', style: { margin: '8px 0', padding: '10px 12px' } },
+        React.createElement('div', { className: 'row' },
+          React.createElement('div', { style: { flex: 1, minWidth: 240 } },
+            React.createElement('div', { className: 'label' }, 'あなたの名前（初回のみ）'),
+            React.createElement('input', {
+              className: 'input', placeholder: '例）Masayuki', value: user,
+              onChange: (e) => { const v = e.target.value.trim(); setUser(v); localStorage.setItem(LS.user, v); }
+            })
+          ),
+          React.createElement('div', null,
+            React.createElement('div', { className: 'label' }, '日付'),
+            React.createElement('input', { type: 'date', className: 'input', value: dateStr, onChange: (e) => setDateStr(e.target.value) })
+          ),
+          React.createElement('button', { className: 'btn', onClick: handleSubmit, disabled: loading }, loading ? '同期中...' : '送信（同期）')
+        )
+      ),
 
-      {/* Part 1 */}
-      <div className="card" style={{ marginTop: 12 }}>
-        <h2 style={{ marginTop: 0 }}>Part 1｜語彙</h2>
-        {store.parts.part1.items.map((it, i) => (
-          <div key={it.id} className="row">
-            <input
-              className="input"
-              placeholder={`英単語/フレーズ #${i + 1}`}
-              value={it.term}
-              readOnly={mode !== "trainer"}
-              onChange={(e) => patch((n) => { n.parts.part1.items[i].term = e.target.value; })}
-            />
-            <input
-              className="input"
-              placeholder="日本語訳"
-              value={it.answerJP}
-              onChange={(e) => patch((n) => { n.parts.part1.items[i].answerJP = e.target.value; })}
-            />
-          </div>
-        ))}
-      </div>
+      // Part 1
+      React.createElement('div', { className: 'card', style: { marginTop: 12 } },
+        React.createElement('h2', { style: { marginTop: 0 } }, 'Part 1｜語彙'),
+        store.parts.part1.items.map((it, i) => (
+          React.createElement('div', { key: it.id, className: 'row' },
+            React.createElement('input', {
+              className: 'input', placeholder: `英単語/フレーズ #${i + 1}`,
+              value: it.term, readOnly: mode !== 'trainer',
+              onChange: (e) => patch((n) => { n.parts.part1.items[i].term = e.target.value; })
+            }),
+            React.createElement('input', {
+              className: 'input', placeholder: '日本語訳', value: it.answerJP,
+              onChange: (e) => patch((n) => { n.parts.part1.items[i].answerJP = e.target.value; })
+            })
+          )
+        ))
+      ),
 
-      {/* Part 2 */}
-      <div className="card" style={{ marginTop: 12 }}>
-        <h2 style={{ marginTop: 0 }}>Part 2｜構文</h2>
-        {store.parts.part2.items.map((it, i) => (
-          <div key={it.id} className="row" style={{ alignItems: "stretch" }}>
-            <textarea
-              className="textarea"
-              placeholder={`プロンプト #${i + 1}`}
-              value={it.prompt}
-              readOnly={mode !== "trainer"}
-              onChange={(e) => patch((n) => { n.parts.part2.items[i].prompt = e.target.value; })}
-            />
-            <textarea
-              className="textarea"
-              placeholder="英語の解答"
-              value={it.userEN}
-              onChange={(e) => patch((n) => { n.parts.part2.items[i].userEN = e.target.value; })}
-            />
-            <textarea
-              className="textarea"
-              placeholder="日本語訳"
-              value={it.userJP}
-              onChange={(e) => patch((n) => { n.parts.part2.items[i].userJP = e.target.value; })}
-            />
-          </div>
-        ))}
-      </div>
+      // Part 2
+      React.createElement('div', { className: 'card', style: { marginTop: 12 } },
+        React.createElement('h2', { style: { marginTop: 0 } }, 'Part 2｜構文'),
+        store.parts.part2.items.map((it, i) => (
+          React.createElement('div', { key: it.id, className: 'row', style: { alignItems: 'stretch' } },
+            React.createElement('textarea', {
+              className: 'textarea', placeholder: `プロンプト #${i + 1}`,
+              value: it.prompt, readOnly: mode !== 'trainer',
+              onChange: (e) => patch((n) => { n.parts.part2.items[i].prompt = e.target.value; })
+            }),
+            React.createElement('textarea', {
+              className: 'textarea', placeholder: '英語の解答', value: it.userEN,
+              onChange: (e) => patch((n) => { n.parts.part2.items[i].userEN = e.target.value; })
+            }),
+            React.createElement('textarea', {
+              className: 'textarea', placeholder: '日本語訳', value: it.userJP,
+              onChange: (e) => patch((n) => { n.parts.part2.items[i].userJP = e.target.value; })
+            })
+          )
+        ))
+      ),
 
-      {/* Part 3 */}
-      <div className="card" style={{ marginTop: 12 }}>
-        <h2 style={{ marginTop: 0 }}>Part 3｜会話</h2>
-        {store.parts.part3.items.map((it, i) => (
-          <div key={it.id} className="row" style={{ alignItems: "stretch" }}>
-            <textarea
-              className="textarea"
-              placeholder="シーン"
-              value={it.scene}
-              readOnly={mode !== "trainer"}
-              onChange={(e) => patch((n) => { n.parts.part3.items[i].scene = e.target.value; })}
-            />
-            <textarea
-              className="textarea"
-              placeholder="日本語セリフ"
-              value={it.masayukiJP}
-              readOnly={mode !== "trainer"}
-              onChange={(e) => patch((n) => { n.parts.part3.items[i].masayukiJP = e.target.value; })}
-            />
-            <textarea
-              className="textarea"
-              placeholder="英訳"
-              value={it.masayukiEN}
-              onChange={(e) => patch((n) => { n.parts.part3.items[i].masayukiEN = e.target.value; })}
-            />
-          </div>
-        ))}
-      </div>
+      // Part 3
+      React.createElement('div', { className: 'card', style: { marginTop: 12 } },
+        React.createElement('h2', { style: { marginTop: 0 } }, 'Part 3｜会話'),
+        store.parts.part3.items.map((it, i) => (
+          React.createElement('div', { key: it.id, className: 'row', style: { alignItems: 'stretch' } },
+            React.createElement('textarea', {
+              className: 'textarea', placeholder: 'シーン', value: it.scene, readOnly: mode !== 'trainer',
+              onChange: (e) => patch((n) => { n.parts.part3.items[i].scene = e.target.value; })
+            }),
+            React.createElement('textarea', {
+              className: 'textarea', placeholder: '日本語セリフ', value: it.masayukiJP, readOnly: mode !== 'trainer',
+              onChange: (e) => patch((n) => { n.parts.part3.items[i].masayukiJP = e.target.value; })
+            }),
+            React.createElement('textarea', {
+              className: 'textarea', placeholder: '英訳', value: it.masayukiEN,
+              onChange: (e) => patch((n) => { n.parts.part3.items[i].masayukiEN = e.target.value; })
+            })
+          )
+        ))
+      ),
 
-      {/* Part 4 */}
-      <div className="card" style={{ marginTop: 12 }}>
-        <h2 style={{ marginTop: 0 }}>Part 4｜英作文</h2>
-        <textarea
-          className="textarea"
-          placeholder="自由英作文"
-          value={store.parts.part4.content}
-          onChange={(e) => patch((n) => { n.parts.part4.content = e.target.value; })}
-        />
-      </div>
+      // Part 4
+      React.createElement('div', { className: 'card', style: { marginTop: 12 } },
+        React.createElement('h2', { style: { marginTop: 0 } }, 'Part 4｜英作文'),
+        React.createElement('textarea', {
+          className: 'textarea', placeholder: '自由英作文', value: store.parts.part4.content,
+          onChange: (e) => patch((n) => { n.parts.part4.content = e.target.value; })
+        })
+      ),
 
-      {/* Trainer Feedback（講師モードで表示） */}
-      <div className="card" style={{ marginTop: 12, marginBottom: 24, display: mode === "trainer" ? "block" : "none" }}>
-        <h2 style={{ marginTop: 0 }}>Trainer Feedback（講師コメント）</h2>
-        <div className="row">
-          <textarea
-            className="textarea"
-            placeholder="Part 1へのコメント"
-            value={store.feedback.part1}
-            onChange={(e) => patch((n) => { n.feedback.part1 = e.target.value; })}
-          />
-          <textarea
-            className="textarea"
-            placeholder="Part 2へのコメント"
-            value={store.feedback.part2}
-            onChange={(e) => patch((n) => { n.feedback.part2 = e.target.value; })}
-          />
-          <textarea
-            className="textarea"
-            placeholder="Part 3へのコメント"
-            value={store.feedback.part3}
-            onChange={(e) => patch((n) => { n.feedback.part3 = e.target.value; })}
-          />
-          <textarea
-            className="textarea"
-            placeholder="Part 4へのコメント"
-            value={store.feedback.part4}
-            onChange={(e) => patch((n) => { n.feedback.part4 = e.target.value; })}
-          />
-        </div>
-        <div className="row" style={{ marginTop: 8 }}>
-          <textarea
-            className="textarea"
-            placeholder="総評"
-            value={store.feedback.overall}
-            onChange={(e) => patch((n) => { n.feedback.overall = e.target.value; })}
-          />
-        </div>
-      </div>
+      // Trainer Feedback（講師モード時）
+      React.createElement('div', { className: 'card', style: { marginTop: 12, marginBottom: 24, display: mode === 'trainer' ? 'block' : 'none' } },
+        React.createElement('h2', { style: { marginTop: 0 } }, 'Trainer Feedback（講師コメント）'),
+        React.createElement('div', { className: 'row' },
+          React.createElement('textarea', { className: 'textarea', placeholder: 'Part 1へのコメント', value: store.feedback.part1, onChange: (e) => patch((n) => { n.feedback.part1 = e.target.value; }) }),
+          React.createElement('textarea', { className: 'textarea', placeholder: 'Part 2へのコメント', value: store.feedback.part2, onChange: (e) => patch((n) => { n.feedback.part2 = e.target.value; }) }),
+          React.createElement('textarea', { className: 'textarea', placeholder: 'Part 3へのコメント', value: store.feedback.part3, onChange: (e) => patch((n) => { n.feedback.part3 = e.target.value; }) }),
+          React.createElement('textarea', { className: 'textarea', placeholder: 'Part 4へのコメント', value: store.feedback.part4, onChange: (e) => patch((n) => { n.feedback.part4 = e.target.value; }) })
+        ),
+        React.createElement('div', { className: 'row', style: { marginTop: 8 } },
+          React.createElement('textarea', { className: 'textarea', placeholder: '総評', value: store.feedback.overall, onChange: (e) => patch((n) => { n.feedback.overall = e.target.value; }) })
+        )
+      ),
 
-      {/* Footnotes */}
-      <div className="hint">
-        最終更新：{new Date(store.meta.updatedAt).toLocaleString()} ｜ ステータス：{store.meta.status}
-        {localStorage.getItem(LS.lastSyncedAt) ? ` ｜ 最終同期：${new Date(localStorage.getItem(LS.lastSyncedAt)).toLocaleString()}` : ""}
-      </div>
+      React.createElement('div', { className: 'hint' },
+        `最終更新：${new Date(store.meta.updatedAt).toLocaleString()} ｜ ステータス：${store.meta.status}`,
+        localStorage.getItem(LS.lastSyncedAt) ? ` ｜ 最終同期：${new Date(localStorage.getItem(LS.lastSyncedAt)).toLocaleString()}` : ''
+      ),
 
-      {/* Footer */}
-      <div style={{ textAlign: "center", fontSize: 12, color: "#6b7280", padding: "24px 0 32px" }}>
-        © {new Date().getFullYear()} annetmii - 学習を習慣に。
-      </div>
-    </div>
+      React.createElement('div', { style: { textAlign: 'center', fontSize: 12, color: '#6b7280', padding: '24px 0 32px' } },
+        `© ${new Date().getFullYear()} annetmii - 学習を習慣に。`
+      )
+    )
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+// ルート装着（エラーは画面に赤帯で表示）
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(ErrorBoundary, null, React.createElement(App)));
