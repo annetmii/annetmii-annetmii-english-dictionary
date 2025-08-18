@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
@@ -14,13 +14,10 @@ import { Label } from "@/components/ui/label";
 
 const APP_KEY = "annetmii-English-Dictionary-v1";
 const PIN_KEY = `${APP_KEY}::trainer_pin`;
-const LAST_EXPORTED_AT_KEY = `${APP_KEY}::last_exported_at`;
 
-// 青バナーの文脈管理（sessionStorage 使用）
-const SS_KEYS = {
-  loadedLessonKey: `${APP_KEY}::loaded_lesson_key`,
-  loadedAt: `${APP_KEY}::loaded_at_iso`,
-};
+// ==== Cloud Endpoints ====
+const NETLIFY_LOAD = "/.netlify/functions/load";
+const NETLIFY_SAVE = "/.netlify/functions/save";
 
 const weekdayTheme: Record<number, { key: string; label: string }> = {
   0: { key: "seasonal", label: "Seasonal（季節・イベント・行事）" },
@@ -51,42 +48,56 @@ function setPin(pin: string) {
   try { localStorage.setItem(PIN_KEY, pin); } catch {}
 }
 
-function newEmptyLesson(dateStr: string, themeLabel: string) {
-  return {
-    meta: {
-      appName: "annetmii English Dictionary",
-      date: dateStr,
-      theme: themeLabel,
-      title: `${dateStr}｜${themeLabel}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: "draft" as "draft" | "submitted" | "returned" | "confirmed",
-      customTheme: "",
-    },
-    parts: {
-      part1: {
-        title: "Part 1｜語彙チェック（英単語→日本語訳, 8問）",
-        instructions: "英単語の日本語訳を入力しましょう。",
-        items: Array.from({ length: 8 }).map((_, i) => ({ id: `p1-${i + 1}`, term: "", answerJP: "" })),
-      },
-      part2: {
-        title: "Part 2｜構文トレーニング（穴埋め + 日本語訳, 5問）",
-        instructions: "語彙を使って英文を完成させ、日本語訳も書きましょう。",
-        items: Array.from({ length: 5 }).map((_, i) => ({ id: `p2-${i + 1}`, prompt: "", userEN: "", userJP: "" })),
-      },
-      part3: {
-        title: "Part 3｜会話ロールプレイ（4問）",
-        instructions: "日本語のセリフを英訳しましょう。",
-        items: Array.from({ length: 4 }).map((_, i) => ({ id: `p3-${i + 1}`, scene: "", masayukiJP: "", masayukiEN: "" })),
-      },
-      part4: {
-        title: "Part 4｜英作文",
-        instructions: "今日のテーマに沿って自由に英作文しましょう。",
-        content: "",
-      },
-    },
-    feedback: { overall: "", part1: "", part2: "", part3: "", part4: "" },
+// ====== 旧データ互換補完 ======
+function ensureShape(lesson: any, dateStr: string, themeLabel: string) {
+  const safe = (v: any, fb: any) => (v === undefined || v === null ? fb : v);
+  const parts = safe(lesson?.parts, {});
+  const part1 = safe(parts.part1, { title: "Part 1｜語彙チェック（英単語→日本語訳, 8問）", instructions: "英単語の日本語訳を入力しましょう。", items: [] });
+  const part2 = safe(parts.part2, { title: "Part 2｜構文トレーニング（穴埋め + 日本語訳, 5問）", instructions: "語彙を使って英文を完成させ、日本語訳も書きましょう。", items: [] });
+  const part3 = safe(parts.part3, { title: "Part 3｜会話ロールプレイ（4問）", instructions: "日本語のセリフを英訳しましょう。", items: [] });
+  const part4 = safe(parts.part4, { title: "Part 4｜英作文", instructions: "今日のテーマに沿って自由に英作文しましょう.", content: "" });
+
+  // item 配列の基本形を保証
+  const fixItems = (arr: any[], shape: (i: number) => any, len: number) => {
+    if (!Array.isArray(arr)) arr = [];
+    if (arr.length === 0) arr = Array.from({ length: len }).map((_, i) => shape(i));
+    return arr;
   };
+  part1.items = fixItems(part1.items, (i) => ({ id: `p1-${i + 1}`, term: "", answerJP: "" }), 8);
+  part2.items = fixItems(part2.items, (i) => ({ id: `p2-${i + 1}`, prompt: "", userEN: "", userJP: "" }), 5);
+  part3.items = fixItems(part3.items, (i) => ({ id: `p3-${i + 1}`, scene: "", masayukiJP: "", masayukiEN: "" }), 4);
+
+  const feedback = safe(lesson?.feedback, {});
+  const feedbackFixed = {
+    overall: safe(feedback.overall, ""),
+    part1: safe(feedback.part1, ""),
+    part2: safe(feedback.part2, ""),
+    part3: safe(feedback.part3, ""),
+    part4: safe(feedback.part4, ""),
+  };
+
+  const meta = safe(lesson?.meta, {});
+  const nowISO = new Date().toISOString();
+  const metaFixed = {
+    appName: "annetmii English Dictionary",
+    date: safe(meta.date, dateStr),
+    theme: safe(meta.theme, themeLabel),
+    title: safe(meta.title, `${dateStr}｜${themeLabel}`),
+    createdAt: safe(meta.createdAt, nowISO),
+    updatedAt: safe(meta.updatedAt, nowISO),
+    status: safe(meta.status, "draft" as "draft" | "submitted" | "returned" | "confirmed"),
+    customTheme: safe(meta.customTheme, ""),
+  };
+
+  return {
+    meta: metaFixed,
+    parts: { part1, part2, part3, part4 },
+    feedback: feedbackFixed,
+  };
+}
+
+function newEmptyLesson(dateStr: string, themeLabel: string) {
+  return ensureShape({}, dateStr, themeLabel);
 }
 
 function hrMondayTemplate(dateStr: string) {
@@ -115,7 +126,7 @@ function hrMondayTemplate(dateStr: string) {
 
 const clone = (o: any) => JSON.parse(JSON.stringify(o));
 
-// --- 講師コメント：パート直下のインライン編集/表示 ---
+// --- 講師コメント：パート直下のインライン編集/表示（既存UIそのまま） ---
 function PartFeedbackInline({
   label,
   value,
@@ -134,12 +145,10 @@ function PartFeedbackInline({
     setText(value || "");
   }, [value]);
 
-  // 学習者には、コメントが空なら何も表示しない
   if (!canEdit && !String(value || "").trim()) return null;
 
   return (
     <div className="mx-0 sm:mx-0">
-      {/* ヘッダー行（右上に導線） */}
       <div className="flex items-center justify-between px-4">
         <div className="text-sm font-medium text-gray-700">講師コメント（{label}）</div>
         {canEdit && !editing && (
@@ -153,7 +162,6 @@ function PartFeedbackInline({
         )}
       </div>
 
-      {/* 表示 or 編集 */}
       <div className="p-4 pt-2">
         {editing && canEdit ? (
           <div className="space-y-2">
@@ -190,103 +198,116 @@ export default function Page() {
   const [editMode, setEditMode] = useState<boolean>(false);
   const [store, setStore] = useState<Record<string, any>>(() => loadAll());
 
-  // ---- 促しUI状態 ----
-  const [showLoadPrompt, setShowLoadPrompt] = useState<boolean>(true); // 青：読み込み促し
-  const [dirtySinceExport, setDirtySinceExport] = useState<boolean>(false); // 黄：未バックアップ
+  // ====== クラウド同期制御（60秒アイドルで自動同期 / 提出時は必ず同期） ======
+  const lastActivityRef = useRef<number>(Date.now());
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
-  // PIN
+  const hashStore = (s: any) => {
+    try { return JSON.stringify(s); } catch { return ""; }
+  };
+  const lastSyncedRef = useRef<string>(""); // 直近同期時のハッシュ
+
+  const scheduleIdleSync = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      const inactive = Date.now() - lastActivityRef.current;
+      if (inactive >= 60_000) {
+        void syncToCloud();
+      }
+    }, 60_000);
+  }, []);
+
+  const markActivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+    scheduleIdleSync();
+  }, [scheduleIdleSync]);
+
+  useEffect(() => {
+    const events = ["keydown", "input", "mousemove", "touchstart", "scroll"];
+    events.forEach((e) => window.addEventListener(e, markActivity, { passive: true } as any));
+    scheduleIdleSync();
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, markActivity as any));
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [markActivity, scheduleIdleSync]);
+
+  // ====== ローカル即時保存（既存の挙動を維持） ======
+  function updateStore(next: Record<string, any>) {
+    setStore(next);
+    saveAll(next);
+    markActivity(); // 入力があればアイドルタイマー更新
+  }
+
+  // ====== クラウドから読込（起動/日付変更） ======
+  const loadFromCloud = useCallback(async () => {
+    try {
+      const d = encodeURIComponent(dateStr);
+      // user は UI に存在しないため省略可（Functions 側で v0 スキーマとして扱う）
+      const res = await fetch(`${NETLIFY_LOAD}?date=${d}`, { cache: "no-store" });
+      if (res.ok) {
+        const payload = await res.json(); // 指定日のレッスン or {}
+        if (payload && Object.keys(payload).length > 0) {
+          const fixed = ensureShape(payload, dateStr, theme.label);
+          const next = clone(loadAll()); // 既存ローカルにマージ
+          next[dateStr] = fixed;
+          setStore(next);
+          saveAll(next);
+          lastSyncedRef.current = hashStore(next);
+          return;
+        }
+      }
+      // クラウドに無ければローカル or 新規
+      const local = loadAll();
+      if (!local[dateStr]) {
+        // 既存に無ければ空テンプレ
+        local[dateStr] = newEmptyLesson(dateStr, theme.label);
+        saveAll(local);
+      }
+      setStore(local);
+      lastSyncedRef.current = hashStore(local);
+    } catch {
+      const local = loadAll();
+      if (!local[dateStr]) local[dateStr] = newEmptyLesson(dateStr, theme.label);
+      setStore(local);
+      saveAll(local);
+      lastSyncedRef.current = hashStore(local);
+    }
+  }, [dateStr, theme.label]);
+
+  useEffect(() => { void loadFromCloud(); }, [loadFromCloud]);
+
+  // ====== クラウド保存 ======
+  const syncToCloud = useCallback(async () => {
+    try {
+      const currentHash = hashStore(store);
+      if (currentHash === lastSyncedRef.current) return; // 変更なし
+      setSyncing(true);
+      // 今回はファイル全体を保存（1ファイルJSON）
+      await fetch(NETLIFY_SAVE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: dateStr, data: store[dateStr] ?? newEmptyLesson(dateStr, theme.label) }),
+      });
+      lastSyncedRef.current = currentHash;
+    } catch {
+      // 失敗してもUIは崩さない（次回の自動同期/提出時に再試行）
+    } finally {
+      setSyncing(false);
+    }
+  }, [store, dateStr, theme.label]);
+
+  // ====== UIロジック（既存そのまま・削除指定のみ除外） ======
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [pinMode, setPinMode] = useState<"set" | "verify" | "change">("verify");
   const [pinInput, setPinInput] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [pinOld, setPinOld] = useState("");
   const [pinError, setPinError] = useState("");
-
   const [showCalendar, setShowCalendar] = useState(false);
 
-  // ===== 離脱ガード（未バックアップなら警告） =====
-  React.useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (!dirtySinceExport) return;
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [dirtySinceExport]);
-
-  // ===== 青バナー：読み込み促しの評価 =====
-  const lessonKey = dateStr; // 文脈キー：当日のレッスンID相当
-
-  function isStale(loadedAtISO: string | null, maxMinutes = 30) {
-    if (!loadedAtISO) return true;
-    const loaded = Date.parse(loadedAtISO);
-    if (Number.isNaN(loaded)) return true;
-    const now = Date.now();
-    const minutes = (now - loaded) / (1000 * 60);
-    const dayChanged = new Date(loadedAtISO).toDateString() !== new Date().toDateString();
-    return minutes > maxMinutes || dayChanged;
-  }
-
-  function evaluateLoadPrompt() {
-    try {
-      const loadedLessonKey = sessionStorage.getItem(SS_KEYS.loadedLessonKey);
-      const loadedAtISO = sessionStorage.getItem(SS_KEYS.loadedAt);
-      const need =
-        loadedLessonKey !== lessonKey ||
-        isStale(loadedAtISO, 30);
-      setShowLoadPrompt(need);
-    } catch {
-      setShowLoadPrompt(true);
-    }
-  }
-
-  React.useEffect(() => {
-    evaluateLoadPrompt();
-    const onVisible = () => {
-      if (document.visibilityState === "visible") evaluateLoadPrompt();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [lessonKey]);
-
-  // ===== 黄バナー：未バックアップ検知 =====
-  function latestUpdatedAt(s: Record<string, any>): number {
-    let t = 0;
-    Object.values(s || {}).forEach((l: any) => {
-      const ts = Date.parse(l?.meta?.updatedAt || "");
-      if (!Number.isNaN(ts)) t = Math.max(t, ts);
-    });
-    return t;
-  }
-
-  React.useEffect(() => {
-    try {
-      const last = Date.parse(localStorage.getItem(LAST_EXPORTED_AT_KEY) || "");
-      const latest = latestUpdatedAt(store);
-      setDirtySinceExport(Number.isNaN(last) ? (Object.keys(store || {}).length > 0) : latest > last);
-    } catch {
-      setDirtySinceExport(Object.keys(store || {}).length > 0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  React.useEffect(() => {
-    try {
-      const last = Date.parse(localStorage.getItem(LAST_EXPORTED_AT_KEY) || "");
-      const latest = latestUpdatedAt(store);
-      setDirtySinceExport(Number.isNaN(last) ? (Object.keys(store || {}).length > 0) : latest > last);
-    } catch {
-      setDirtySinceExport(Object.keys(store || {}).length > 0);
-    }
-  }, [store]);
-
   const currentLesson = useMemo(() => store[dateStr] ?? null, [store, dateStr]);
-
-  function updateStore(next: Record<string, any>) {
-    setStore(next);
-    saveAll(next);
-  }
 
   function createOrLoadTemplate() {
     const next = clone(store);
@@ -294,12 +315,11 @@ export default function Page() {
     const newLesson = weekday === 1 ? hrMondayTemplate(dateStr) : newEmptyLesson(dateStr, theme.label);
     next[dateStr] = newLesson;
     updateStore(next);
-    setDirtySinceExport(true);
   }
 
   function saveLesson(partial: any) {
     const next = clone(store);
-    next[dateStr] = {
+    next[dateStr] = ensureShape({
       ...(next[dateStr] ?? newEmptyLesson(dateStr, theme.label)),
       ...partial,
       meta: {
@@ -309,9 +329,8 @@ export default function Page() {
         theme: theme.label,
         updatedAt: new Date().toISOString(),
       },
-    };
+    }, dateStr, theme.label);
     updateStore(next);
-    setDirtySinceExport(true);
   }
 
   function removeLesson() {
@@ -319,55 +338,34 @@ export default function Page() {
     const next = clone(store);
     delete next[dateStr];
     updateStore(next);
-    setDirtySinceExport(true);
   }
 
   function setStatus(status: "draft" | "submitted" | "returned" | "confirmed") {
     if (!currentLesson) return;
     saveLesson({ meta: { ...(currentLesson.meta || {}), status } });
-    setDirtySinceExport(true);
   }
 
-  function exportJSON() {
-    const blob = new Blob([JSON.stringify(store, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const month = (dateStr || new Date().toISOString().slice(0, 10)).slice(0, 7).replace("-", ""); // YYYYMM
-    a.download = `${month}_annetmii_english_dictionary.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    try { localStorage.setItem(LAST_EXPORTED_AT_KEY, new Date().toISOString()); } catch {}
-    setDirtySinceExport(false);
-  }
+  // 提出時は必ず同期
+  const handleSubmit = useCallback(async () => {
+    setStatus("submitted");
+    await syncToCloud();
+  }, [syncToCloud]);
 
-  function importJSON(ev: React.ChangeEvent<HTMLInputElement>) {
-    const f = ev.target.files?.[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      try {
-        const parsed = JSON.parse(String(r.result || "{}"));
-        updateStore(parsed);
-        // 読み込み成功 → 文脈のロード記録を更新し、青バナーを消す
-        try {
-          sessionStorage.setItem(SS_KEYS.loadedLessonKey, lessonKey);
-          sessionStorage.setItem(SS_KEYS.loadedAt, new Date().toISOString());
-        } catch {}
-        setShowLoadPrompt(false);
-        alert("インポートが完了しました。");
-      } catch {
-        alert("JSONの読み込みに失敗しました。");
-      }
-    };
-    r.readAsText(f);
-  }
+  // 返却/確認時も同期を掛ける方が安全（UIは不変更）
+  const handleReturn = useCallback(async () => {
+    setStatus("returned");
+    await syncToCloud();
+  }, [syncToCloud]);
 
-  const disabledForLearner = mode === "learner" && currentLesson?.meta?.status === "submitted";
+  const handleConfirm = useCallback(async () => {
+    setStatus("confirmed");
+    await syncToCloud();
+  }, [syncToCloud]);
+
   function hasLesson(d: Date) { return Boolean(store[ymd(d)]); }
 
   return (
-    <div className="min-h-screen w-full bg-white text-gray-900 p-3 sm:p-4 md:p-6 max-w-3xl mx-auto">
+    <div className="min-h-screen w-full bg-white text-gray-900 p-3 sm:p-4 md:p-6 max-w-3xl mx-auto" aria-busy={syncing ? true : undefined}>
       {/* App brand header */}
       <div className="flex flex-col items-center justify-center py-4">
         <Image
@@ -450,38 +448,11 @@ export default function Page() {
             <Button size="sm" onClick={createOrLoadTemplate}>この日のレッスン作成</Button>
           )}
           <Button size="sm" variant="outline" onClick={() => window.print()}>印刷 / PDF保存</Button>
-          <Button size="sm" className="bg-black text-white hover:bg-gray-800" onClick={exportJSON}>データ書き出し</Button>
-
-          {/* 隠しinputをButtonで起動 */}
-          <input id="data-import" type="file" accept="application/json" className="hidden" onChange={importJSON} />
-          <Button size="sm" className="bg-black text-white hover:bg-gray-800" onClick={() => document.getElementById('data-import')?.click()}>
-            データ読み込み
-          </Button>
+          {/* 手動入出力ボタンは削除（自動同期に移行） */}
         </div>
       </header>
 
-      {/* 青：最新データの読み込みを促す（文脈が未ロード/鮮度切れなら表示） */}
-      {showLoadPrompt && (
-        <div className="mb-3 rounded-xl border border-blue-300 bg-blue-50 text-blue-900 p-3 flex items-center justify-between">
-          <div className="text-sm">
-            まず「データ読み込み」を実行してください（最新の出題・コメントを取り込みます）。
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => document.getElementById('data-import')?.click()}
-          >
-            データ読み込み
-          </Button>
-        </div>
-      )}
-
-      {/* 黄：未バックアップ（ボタンは置かず上部の書き出しを利用） */}
-      {dirtySinceExport && (
-        <div className="sticky top-[56px] z-40 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 shadow">
-  保存が必要です。「データ書き出し」で保存してください。
-</div>
-      )}
+      {/* 青/黄バナー、起動ガード、離脱警告は削除済み */}
 
       {/* 本文 */}
       <div className="text-[15px] sm:text-base">
@@ -502,7 +473,7 @@ export default function Page() {
             {/* Part 1 */}
             <SectionPart1
               data={currentLesson.parts.part1}
-              disabled={disabledForLearner}
+              disabled={mode === "learner" && currentLesson?.meta?.status === "submitted"}
               onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part1: next } })}
               editMode={mode === "trainer" && editMode}
             />
@@ -516,7 +487,7 @@ export default function Page() {
             {/* Part 2 */}
             <SectionPart2
               data={currentLesson.parts.part2}
-              disabled={disabledForLearner}
+              disabled={mode === "learner" && currentLesson?.meta?.status === "submitted"}
               onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part2: next } })}
               editMode={mode === "trainer" && editMode}
             />
@@ -530,7 +501,7 @@ export default function Page() {
             {/* Part 3 */}
             <SectionPart3
               data={currentLesson.parts.part3}
-              disabled={disabledForLearner}
+              disabled={mode === "learner" && currentLesson?.meta?.status === "submitted"}
               onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part3: next } })}
               editMode={mode === "trainer" && editMode}
             />
@@ -544,7 +515,7 @@ export default function Page() {
             {/* Part 4 */}
             <SectionPart4
               data={currentLesson.parts.part4}
-              disabled={disabledForLearner}
+              disabled={mode === "learner" && currentLesson?.meta?.status === "submitted"}
               onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part4: next } })}
             />
             <PartFeedbackInline
@@ -554,7 +525,7 @@ export default function Page() {
               onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, part4: v } })}
             />
 
-            {/* Overall（任意：必要なら活かす） */}
+            {/* Overall */}
             <PartFeedbackInline
               label="総評"
               value={currentLesson.feedback?.overall || ""}
@@ -562,20 +533,20 @@ export default function Page() {
               onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, overall: v } })}
             />
 
-            {/* 下部アクション */}
+            {/* 下部アクション（見た目/文言は不変更） */}
             <BottomActions
               mode={mode}
               lesson={currentLesson}
-              onSubmit={() => { setStatus("submitted"); setDirtySinceExport(true); }}
+              onSubmit={handleSubmit}
               onReopen={() => setStatus("draft")}
-              onReturn={() => setStatus("returned")}
-              onConfirm={() => { setStatus("confirmed"); setDirtySinceExport(true); }}
+              onReturn={handleReturn}
+              onConfirm={handleConfirm}
             />
           </div>
         )}
       </div>
 
-      {/* PINモーダル */}
+      {/* PINモーダル（既存） */}
       <Dialog open={pinModalOpen} onOpenChange={(o) => { setPinModalOpen(o); if (!o) setPinError(""); }}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
@@ -663,36 +634,11 @@ export default function Page() {
       <footer className="text-center text-xs text-gray-500 mt-10 pb-6">
         © {new Date().getFullYear()} annetmii - 学習を習慣に。
       </footer>
-
-      {/* 起動ガード：最初に読み込みを促す。スキップも可能（スキップ後も青バナーは上部に残る） */}
-      <Dialog open={showLoadPrompt} onOpenChange={(o) => setShowLoadPrompt(o)}>
-        <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>はじめに：データ読み込み</DialogTitle>
-            <DialogDescription>
-              最新の出題や講師コメントを取り込むため、まず「データ読み込み」を実行してください。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-4 pt-0 text-sm text-gray-600">
-            すぐに学習を始めたい場合は「今回はスキップ」を選べます（青いリマインドが残ります）。
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setShowLoadPrompt(false); }}>
-              今回はスキップ
-            </Button>
-            <Button onClick={() => {
-              document.getElementById('data-import')?.click();
-            }}>
-              データ読み込み
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
 
-/* ========= UI Blocks ========= */
+/* ========= UI Blocks（既存のまま） ========= */
 
 function EmptyState({ themeLabel }: { themeLabel: string }) {
   return (
