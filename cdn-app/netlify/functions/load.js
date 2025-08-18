@@ -1,27 +1,50 @@
-export const handler = async (event) => {
+/* netlify/functions/load.js */
+const OWNER = process.env.GITHUB_OWNER || 'owner-name';
+const REPO = process.env.GITHUB_REPO || 'repo-name';
+const FILE_PATH = process.env.GITHUB_DATA_PATH || 'data/english-dict.json';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
+async function fetchFromGitHub() {
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(FILE_PATH)}`, {
+    headers: {
+      Authorization: `token ${GITHUB_TOKEN}`,
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'netlify-fn',
+    },
+  });
+  if (res.status === 404) return { json: {}, sha: null };
+  if (!res.ok) throw new Error(`GitHub fetch error: ${res.status}`);
+  const data = await res.json();
+  const content = Buffer.from(data.content || '', 'base64').toString('utf8');
+  let json = {};
+  try { json = JSON.parse(content); } catch { json = {}; }
+  return { json, sha: data.sha || null };
+}
+
+exports.handler = async (event) => {
   try {
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-    const OWNER = process.env.GITHUB_OWNER;
-    const REPO  = process.env.GITHUB_REPO;
-    const DIR   = process.env.DATA_DIR || "data";
-    if (!GITHUB_TOKEN || !OWNER || !REPO) {
-      return { statusCode: 500, body: JSON.stringify({ ok:false, error:"Missing GitHub env" }) };
+    if (!GITHUB_TOKEN) {
+      return { statusCode: 500, body: JSON.stringify({ error: 'Missing GITHUB_TOKEN' }) };
     }
-    const params = event.queryStringParameters || {};
-    const user = (params.user || "").trim();
-    const date = (params.date || "").trim();
-    if (!user || !date) return { statusCode: 400, body: JSON.stringify({ ok:false, error:"user/date required" }) };
+    const url = new URL(event.rawUrl || `https://${event.headers.host}${event.path}${event.rawQuery ? '?' + event.rawQuery : ''}`);
+    const user = url.searchParams.get('user') || ''; // 任意
+    const date = url.searchParams.get('date') || '';
+    if (!date) return { statusCode: 400, body: JSON.stringify({ error: 'date is required' }) };
 
-    const path = `${DIR}/${encodeURIComponent(user)}/${date}.json`;
-    const url  = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`;
-    const res  = await fetch(url, { headers: { Authorization: `token ${GITHUB_TOKEN}`, "User-Agent":"netlify-func" }});
-    if (res.status === 404) return { statusCode: 200, body: JSON.stringify({ ok:true, data:null }) };
-    if (!res.ok) return { statusCode: 502, body: JSON.stringify({ ok:false, error:`github ${res.status}` }) };
+    const { json } = await fetchFromGitHub();
 
-    const json = await res.json();
-    const content = Buffer.from(json.content, "base64").toString("utf8");
-    return { statusCode: 200, body: JSON.stringify({ ok:true, data: JSON.parse(content) }) };
+    // スキーマ互換：優先度 v2(users[user][date]) -> v1([user][date]) -> v0([date])
+    let hit = null;
+    if (user && json?.users?.[user]?.[date]) hit = json.users[user][date];
+    else if (user && json?.[user]?.[date]) hit = json[user][date];
+    else if (json?.[date]) hit = json[date];
+
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      body: JSON.stringify(hit || {}),
+    };
   } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ ok:false, error: e.message }) };
+    return { statusCode: 500, body: JSON.stringify({ error: String(e?.message || e) }) };
   }
 };
