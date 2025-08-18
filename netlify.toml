@@ -1,7 +1,9 @@
 [build]
-  command = ""
-  publish = "cdn-app"
+  command = ""               # ビルドなし（CDN版）
+  publish = "cdn-app"        # ここを公開
 
 [functions]
   directory = "cdn-app/netlify/functions"
   node_bundler = "esbuild"
+
+# もし plugins セクションがあるなら完全に削除（Next.js プラグインを使わない）
