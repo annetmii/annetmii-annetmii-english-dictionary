@@ -1,34 +1,24 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>English Dictionary (No-build)</title>
+  <title>English Dictionary</title>
   <link rel="stylesheet" href="https://unpkg.com/modern-css-reset/dist/reset.min.css">
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#fff; color:#111; }
-    .container { max-width: 800px; margin: 0 auto; padding: 16px; }
-    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .btn { padding: 10px 14px; border-radius: 12px; border:1px solid #111; background:#111; color:#fff; cursor:pointer; }
-    .btn:disabled { opacity:.5; cursor:default; }
-    .card { border:1px solid #e5e7eb; border-radius:16px; padding:16px; background:#fff; }
-    .label { font-size:12px; color:#6b7280; }
-    .input, .textarea { width:100%; border:1px solid #d1d5db; border-radius:12px; padding:10px; font-size:16px; }
-    .textarea { min-height:120px; }
-    .hint { font-size:12px; color:#6b7280; }
+    body { font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial; background:#fff; color:#111; }
+    .container { max-width: 860px; margin: 0 auto; padding: 16px; }
   </style>
 </head>
 <body>
   <div id="root" class="container"></div>
 
-    <!-- React (UMD) を先にグローバルへ読み込み -->
+  <!-- 1) React/DOM をグローバル(window)へ -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-
-  <!-- JSXをその場で変換するために Babel Standalone を使う（小規模用途向け） -->
+  <!-- 2) JSXをその場変換（Babel Standalone） -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- app.jsx は JSX のまま読み込む。Babel が実行時に変換してくれる -->
+  <!-- 3) あなたのアプリ本体（JSXのまま読み込む！type="text/babel"） -->
   <script type="text/babel" data-presets="env,react" src="./app.jsx"></script>
 </body>
 </html>
