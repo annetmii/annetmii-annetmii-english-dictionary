@@ -1,7 +1,7 @@
-
 [build]
-  command = "npm run build"
-  publish = ".next"
+  command = ""
+  publish = "cdn-app"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+[functions]
+  directory = "cdn-app/netlify/functions"
+  node_bundler = "esbuild"
