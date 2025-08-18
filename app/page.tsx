@@ -12,13 +12,15 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
+/* ====== 既存キー（保持） ====== */
 const APP_KEY = "annetmii-English-Dictionary-v1";
 const PIN_KEY = `${APP_KEY}::trainer_pin`;
 
-// ==== Cloud Endpoints ====
+/* ====== Netlify Functions エンドポイント（追加） ====== */
 const NETLIFY_LOAD = "/.netlify/functions/load";
 const NETLIFY_SAVE = "/.netlify/functions/save";
 
+/* ====== 曜日テーマ（既存） ====== */
 const weekdayTheme: Record<number, { key: string; label: string }> = {
   0: { key: "seasonal", label: "Seasonal（季節・イベント・行事）" },
   1: { key: "hr", label: "HR（採用・育成）" },
@@ -34,6 +36,7 @@ function ymd(d: Date) {
   return z.toISOString().slice(0, 10);
 }
 
+/* ====== 既存ローカル保存（維持） ====== */
 function loadAll(): Record<string, any> {
   try { return JSON.parse(localStorage.getItem(APP_KEY) || "{}"); } catch { return {}; }
 }
@@ -41,6 +44,7 @@ function saveAll(data: Record<string, any>) {
   localStorage.setItem(APP_KEY, JSON.stringify(data));
 }
 
+/* ====== PIN（既存維持） ====== */
 function getPin(): string {
   try { return localStorage.getItem(PIN_KEY) || ""; } catch { return ""; }
 }
@@ -48,24 +52,24 @@ function setPin(pin: string) {
   try { localStorage.setItem(PIN_KEY, pin); } catch {}
 }
 
-// ====== 旧データ互換補完 ======
+/* ====== ensureShape（旧データ互換・parts/feedback補完） ====== */
 function ensureShape(lesson: any, dateStr: string, themeLabel: string) {
   const safe = (v: any, fb: any) => (v === undefined || v === null ? fb : v);
   const parts = safe(lesson?.parts, {});
   const part1 = safe(parts.part1, { title: "Part 1｜語彙チェック（英単語→日本語訳, 8問）", instructions: "英単語の日本語訳を入力しましょう。", items: [] });
   const part2 = safe(parts.part2, { title: "Part 2｜構文トレーニング（穴埋め + 日本語訳, 5問）", instructions: "語彙を使って英文を完成させ、日本語訳も書きましょう。", items: [] });
   const part3 = safe(parts.part3, { title: "Part 3｜会話ロールプレイ（4問）", instructions: "日本語のセリフを英訳しましょう。", items: [] });
-  const part4 = safe(parts.part4, { title: "Part 4｜英作文", instructions: "今日のテーマに沿って自由に英作文しましょう.", content: "" });
+  const part4 = safe(parts.part4, { title: "Part 4｜英作文", instructions: "今日のテーマに沿って自由に英作文しましょう。", content: "" });
 
-  // item 配列の基本形を保証
-  const fixItems = (arr: any[], shape: (i: number) => any, len: number) => {
+  // 必要最小だけ補完（配列が空なら雛形生成）
+  const fix = (arr: any[], f: (i: number) => any, len: number) => {
     if (!Array.isArray(arr)) arr = [];
-    if (arr.length === 0) arr = Array.from({ length: len }).map((_, i) => shape(i));
+    if (arr.length === 0) arr = Array.from({ length: len }).map((_, i) => f(i));
     return arr;
   };
-  part1.items = fixItems(part1.items, (i) => ({ id: `p1-${i + 1}`, term: "", answerJP: "" }), 8);
-  part2.items = fixItems(part2.items, (i) => ({ id: `p2-${i + 1}`, prompt: "", userEN: "", userJP: "" }), 5);
-  part3.items = fixItems(part3.items, (i) => ({ id: `p3-${i + 1}`, scene: "", masayukiJP: "", masayukiEN: "" }), 4);
+  part1.items = fix(part1.items, (i) => ({ id: `p1-${i + 1}`, term: "", answerJP: "" }), 8);
+  part2.items = fix(part2.items, (i) => ({ id: `p2-${i + 1}`, prompt: "", userEN: "", userJP: "" }), 5);
+  part3.items = fix(part3.items, (i) => ({ id: `p3-${i + 1}`, scene: "", masayukiJP: "", masayukiEN: "" }), 4);
 
   const feedback = safe(lesson?.feedback, {});
   const feedbackFixed = {
@@ -77,29 +81,26 @@ function ensureShape(lesson: any, dateStr: string, themeLabel: string) {
   };
 
   const meta = safe(lesson?.meta, {});
-  const nowISO = new Date().toISOString();
+  const now = new Date().toISOString();
   const metaFixed = {
     appName: "annetmii English Dictionary",
     date: safe(meta.date, dateStr),
     theme: safe(meta.theme, themeLabel),
     title: safe(meta.title, `${dateStr}｜${themeLabel}`),
-    createdAt: safe(meta.createdAt, nowISO),
-    updatedAt: safe(meta.updatedAt, nowISO),
+    createdAt: safe(meta.createdAt, now),
+    updatedAt: safe(meta.updatedAt, now),
     status: safe(meta.status, "draft" as "draft" | "submitted" | "returned" | "confirmed"),
     customTheme: safe(meta.customTheme, ""),
   };
 
-  return {
-    meta: metaFixed,
-    parts: { part1, part2, part3, part4 },
-    feedback: feedbackFixed,
-  };
+  return { meta: metaFixed, parts: { part1, part2, part3, part4 }, feedback: feedbackFixed };
 }
 
 function newEmptyLesson(dateStr: string, themeLabel: string) {
   return ensureShape({}, dateStr, themeLabel);
 }
 
+/* ====== あなたの既存テンプレ（維持） ====== */
 function hrMondayTemplate(dateStr: string) {
   const lesson = newEmptyLesson(dateStr, weekdayTheme[1].label);
   const p1Terms = [
@@ -126,63 +127,35 @@ function hrMondayTemplate(dateStr: string) {
 
 const clone = (o: any) => JSON.parse(JSON.stringify(o));
 
-// --- 講師コメント：パート直下のインライン編集/表示（既存UIそのまま） ---
-function PartFeedbackInline({
-  label,
-  value,
-  canEdit,
-  onSave,
-}: {
-  label: string;
-  value: string;
-  canEdit: boolean;
-  onSave: (v: string) => void;
-}) {
+/* ====== 既存：講師コメント（変更なし） ====== */
+function PartFeedbackInline({ label, value, canEdit, onSave }: { label: string; value: string; canEdit: boolean; onSave: (v: string) => void; }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState<string>(value || "");
-
-  React.useEffect(() => {
-    setText(value || "");
-  }, [value]);
-
+  React.useEffect(() => { setText(value || ""); }, [value]);
   if (!canEdit && !String(value || "").trim()) return null;
-
   return (
     <div className="mx-0 sm:mx-0">
       <div className="flex items-center justify-between px-4">
         <div className="text-sm font-medium text-gray-700">講師コメント（{label}）</div>
         {canEdit && !editing && (
-          <button
-            type="button"
-            className="text-xs text-blue-600 underline"
-            onClick={() => setEditing(true)}
-          >
+          <button type="button" className="text-xs text-blue-600 underline" onClick={() => setEditing(true)}>
             {String(value || "").trim() ? "編集" : "コメントを書く"}
           </button>
         )}
       </div>
-
       <div className="p-4 pt-2">
         {editing && canEdit ? (
           <div className="space-y-2">
-            <Textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={`${label} へのコメント`}
-              className="min-h-[80px]"
-              autoFocus
-            />
+            <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={`${label} へのコメント`} className="min-h-[80px]" autoFocus />
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => { setEditing(false); setText(value || ""); }}>キャンセル</Button>
               <Button onClick={() => { onSave(text); setEditing(false); }}>保存</Button>
             </div>
           </div>
         ) : (
-          String(value || "").trim() ? (
-            <div className="rounded-xl border bg-white p-3 text-[15px] whitespace-pre-wrap">{value}</div>
-          ) : (
-            canEdit ? (<div className="text-xs text-gray-400">※ まだコメントはありません。</div>) : null
-          )
+          String(value || "").trim()
+            ? <div className="rounded-xl border bg-white p-3 text-[15px] whitespace-pre-wrap">{value}</div>
+            : canEdit ? <div className="text-xs text-gray-400">※ まだコメントはありません。</div> : null
         )}
       </div>
     </div>
@@ -198,23 +171,19 @@ export default function Page() {
   const [editMode, setEditMode] = useState<boolean>(false);
   const [store, setStore] = useState<Record<string, any>>(() => loadAll());
 
-  // ====== クラウド同期制御（60秒アイドルで自動同期 / 提出時は必ず同期） ======
+  /* ====== 60秒アイドルでクラウド自動同期（追加） ====== */
   const lastActivityRef = useRef<number>(Date.now());
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const lastSyncedHashRef = useRef<string>("");
 
-  const hashStore = (s: any) => {
-    try { return JSON.stringify(s); } catch { return ""; }
-  };
-  const lastSyncedRef = useRef<string>(""); // 直近同期時のハッシュ
+  const hash = (v: any) => { try { return JSON.stringify(v); } catch { return ""; } };
 
   const scheduleIdleSync = useCallback(() => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
       const inactive = Date.now() - lastActivityRef.current;
-      if (inactive >= 60_000) {
-        void syncToCloud();
-      }
+      if (inactive >= 60_000) void syncToCloud();
     }, 60_000);
   }, []);
 
@@ -233,72 +202,69 @@ export default function Page() {
     };
   }, [markActivity, scheduleIdleSync]);
 
-  // ====== ローカル即時保存（既存の挙動を維持） ======
+  /* ====== ローカル即時保存（既存維持＋activity記録のみ追加） ====== */
   function updateStore(next: Record<string, any>) {
     setStore(next);
     saveAll(next);
-    markActivity(); // 入力があればアイドルタイマー更新
+    markActivity();
   }
 
-  // ====== クラウドから読込（起動/日付変更） ======
+  /* ====== 起動/日付変更時にクラウド自動読み込み（追加） ====== */
   const loadFromCloud = useCallback(async () => {
     try {
-      const d = encodeURIComponent(dateStr);
-      // user は UI に存在しないため省略可（Functions 側で v0 スキーマとして扱う）
-      const res = await fetch(`${NETLIFY_LOAD}?date=${d}`, { cache: "no-store" });
+      const res = await fetch(`${NETLIFY_LOAD}?date=${encodeURIComponent(dateStr)}`, { cache: "no-store" });
       if (res.ok) {
-        const payload = await res.json(); // 指定日のレッスン or {}
-        if (payload && Object.keys(payload).length > 0) {
-          const fixed = ensureShape(payload, dateStr, theme.label);
-          const next = clone(loadAll()); // 既存ローカルにマージ
+        const cloud = await res.json();
+        if (cloud && Object.keys(cloud).length > 0) {
+          const fixed = ensureShape(cloud, dateStr, theme.label);
+          const next = clone(loadAll());
           next[dateStr] = fixed;
           setStore(next);
           saveAll(next);
-          lastSyncedRef.current = hashStore(next);
+          lastSyncedHashRef.current = hash(next);
           return;
         }
       }
-      // クラウドに無ければローカル or 新規
+      // クラウドに無ければローカル or 雛形
       const local = loadAll();
-      if (!local[dateStr]) {
-        // 既存に無ければ空テンプレ
-        local[dateStr] = newEmptyLesson(dateStr, theme.label);
-        saveAll(local);
-      }
+      if (!local[dateStr]) local[dateStr] = newEmptyLesson(dateStr, theme.label);
       setStore(local);
-      lastSyncedRef.current = hashStore(local);
+      saveAll(local);
+      lastSyncedHashRef.current = hash(local);
     } catch {
       const local = loadAll();
       if (!local[dateStr]) local[dateStr] = newEmptyLesson(dateStr, theme.label);
       setStore(local);
       saveAll(local);
-      lastSyncedRef.current = hashStore(local);
+      lastSyncedHashRef.current = hash(local);
     }
   }, [dateStr, theme.label]);
 
   useEffect(() => { void loadFromCloud(); }, [loadFromCloud]);
 
-  // ====== クラウド保存 ======
+  /* ====== クラウド保存（追加） ====== */
   const syncToCloud = useCallback(async () => {
     try {
-      const currentHash = hashStore(store);
-      if (currentHash === lastSyncedRef.current) return; // 変更なし
+      const current = store[dateStr] ?? newEmptyLesson(dateStr, theme.label);
+      const snapshot = clone(store);
+      const snapshotHash = hash(snapshot);
+      if (snapshotHash === lastSyncedHashRef.current) return; // 変更なし
       setSyncing(true);
-      // 今回はファイル全体を保存（1ファイルJSON）
       await fetch(NETLIFY_SAVE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: dateStr, data: store[dateStr] ?? newEmptyLesson(dateStr, theme.label) }),
+        body: JSON.stringify({ date: dateStr, data: current }),
       });
-      lastSyncedRef.current = currentHash;
+      lastSyncedHashRef.current = snapshotHash;
     } catch {
-      // 失敗してもUIは崩さない（次回の自動同期/提出時に再試行）
+      /* 失敗時は次回の自動同期/提出で再トライ */
     } finally {
       setSyncing(false);
     }
   }, [store, dateStr, theme.label]);
 
-  // ====== UIロジック（既存そのまま・削除指定のみ除外） ======
+  /* ====== 以降、UIは「削除指定」以外そのまま ====== */
+
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [pinMode, setPinMode] = useState<"set" | "verify" | "change">("verify");
   const [pinInput, setPinInput] = useState("");
@@ -345,13 +311,13 @@ export default function Page() {
     saveLesson({ meta: { ...(currentLesson.meta || {}), status } });
   }
 
-  // 提出時は必ず同期
+  // 提出時は必ず同期（要求）
   const handleSubmit = useCallback(async () => {
     setStatus("submitted");
     await syncToCloud();
   }, [syncToCloud]);
 
-  // 返却/確認時も同期を掛ける方が安全（UIは不変更）
+  // 返却/確認でも同期を掛けておくとデータ一貫（UIはそのまま）
   const handleReturn = useCallback(async () => {
     setStatus("returned");
     await syncToCloud();
@@ -366,28 +332,16 @@ export default function Page() {
 
   return (
     <div className="min-h-screen w-full bg-white text-gray-900 p-3 sm:p-4 md:p-6 max-w-3xl mx-auto" aria-busy={syncing ? true : undefined}>
-      {/* App brand header */}
+      {/* App brand header（既存） */}
       <div className="flex flex-col items-center justify-center py-4">
-        <Image
-          src="/logo.png"
-          alt="annetmii English Dictionary Logo"
-          width={88}
-          height={88}
-          className="mb-2"
-        />
-        <h1 className="text-2xl font-bold text-gray-900">
-          English Dictionary
-        </h1>
+        <Image src="/logo.png" alt="annetmii English Dictionary Logo" width={88} height={88} className="mb-2" />
+        <h1 className="text-2xl font-bold text-gray-900">English Dictionary</h1>
       </div>
 
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b mb-3 sm:mb-4">
         <div className="flex items-center justify-between py-2 gap-3">
           <div className="flex items-center gap-2">
-            <button
-              className="border rounded-xl px-3 py-1 text-sm hover:bg-gray-50"
-              onClick={() => setShowCalendar((s) => !s)}
-              aria-expanded={showCalendar}
-            >
+            <button className="border rounded-xl px-3 py-1 text-sm hover:bg-gray-50" onClick={() => setShowCalendar((s) => !s)} aria-expanded={showCalendar}>
               {dateStr}（{theme.label}）
             </button>
           </div>
@@ -444,99 +398,92 @@ export default function Page() {
         )}
 
         <div className="flex flex-wrap items-center gap-2 pb-2">
-          {mode === "trainer" && (
-            <Button size="sm" onClick={createOrLoadTemplate}>この日のレッスン作成</Button>
-          )}
+          {mode === "trainer" && (<Button size="sm" onClick={createOrLoadTemplate}>この日のレッスン作成</Button>)}
           <Button size="sm" variant="outline" onClick={() => window.print()}>印刷 / PDF保存</Button>
-          {/* 手動入出力ボタンは削除（自動同期に移行） */}
+          {/* ▼ 削除指定：手動入出力ボタンは撤去（見た目の他要素はそのまま） */}
         </div>
       </header>
 
-      {/* 青/黄バナー、起動ガード、離脱警告は削除済み */}
+      {/* ▼ 削除指定：青バナー、黄バナー、起動ガードDialog、beforeunload の離脱警告を完全撤去 */}
 
-      {/* 本文 */}
+      {/* 本文（既存） */}
       <div className="text-[15px] sm:text-base">
-        {!currentLesson ? (
+        {!store[dateStr] ? (
           <EmptyState themeLabel={theme.label} />
         ) : (
           <div className="space-y-4">
-            <LessonMetaBar currentLesson={currentLesson} />
+            <LessonMetaBar currentLesson={store[dateStr]} />
 
-            {/* 今日のテーマ */}
             <DayThemeEditor
-              value={currentLesson.meta?.customTheme || ""}
+              value={store[dateStr].meta?.customTheme || ""}
               editable={mode === "trainer" && editMode}
               weekdayLabel={theme.label}
-              onChange={(v) => saveLesson({ meta: { ...(currentLesson.meta || {}), customTheme: v } })}
+              onChange={(v) =>
+                saveLesson({ meta: { ...(store[dateStr].meta || {}), customTheme: v } })
+              }
             />
 
-            {/* Part 1 */}
             <SectionPart1
-              data={currentLesson.parts.part1}
-              disabled={mode === "learner" && currentLesson?.meta?.status === "submitted"}
-              onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part1: next } })}
+              data={store[dateStr].parts.part1}
+              disabled={mode === "learner" && store[dateStr]?.meta?.status === "submitted"}
+              onChange={(next) => saveLesson({ parts: { ...store[dateStr].parts, part1: next } })}
               editMode={mode === "trainer" && editMode}
             />
             <PartFeedbackInline
               label="Part 1"
-              value={currentLesson.feedback?.part1 || ""}
+              value={store[dateStr].feedback?.part1 || ""}
               canEdit={mode === "trainer"}
-              onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, part1: v } })}
+              onSave={(v) => saveLesson({ feedback: { ...store[dateStr].feedback, part1: v } })}
             />
 
-            {/* Part 2 */}
             <SectionPart2
-              data={currentLesson.parts.part2}
-              disabled={mode === "learner" && currentLesson?.meta?.status === "submitted"}
-              onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part2: next } })}
+              data={store[dateStr].parts.part2}
+              disabled={mode === "learner" && store[dateStr]?.meta?.status === "submitted"}
+              onChange={(next) => saveLesson({ parts: { ...store[dateStr].parts, part2: next } })}
               editMode={mode === "trainer" && editMode}
             />
             <PartFeedbackInline
               label="Part 2"
-              value={currentLesson.feedback?.part2 || ""}
+              value={store[dateStr].feedback?.part2 || ""}
               canEdit={mode === "trainer"}
-              onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, part2: v } })}
+              onSave={(v) => saveLesson({ feedback: { ...store[dateStr].feedback, part2: v } })}
             />
 
-            {/* Part 3 */}
             <SectionPart3
-              data={currentLesson.parts.part3}
-              disabled={mode === "learner" && currentLesson?.meta?.status === "submitted"}
-              onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part3: next } })}
+              data={store[dateStr].parts.part3}
+              disabled={mode === "learner" && store[dateStr]?.meta?.status === "submitted"}
+              onChange={(next) => saveLesson({ parts: { ...store[dateStr].parts, part3: next } })}
               editMode={mode === "trainer" && editMode}
             />
             <PartFeedbackInline
               label="Part 3"
-              value={currentLesson.feedback?.part3 || ""}
+              value={store[dateStr].feedback?.part3 || ""}
               canEdit={mode === "trainer"}
-              onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, part3: v } })}
+              onSave={(v) => saveLesson({ feedback: { ...store[dateStr].feedback, part3: v } })}
             />
 
-            {/* Part 4 */}
             <SectionPart4
-              data={currentLesson.parts.part4}
-              disabled={mode === "learner" && currentLesson?.meta?.status === "submitted"}
-              onChange={(next) => saveLesson({ parts: { ...currentLesson.parts, part4: next } })}
+              data={store[dateStr].parts.part4}
+              disabled={mode === "learner" && store[dateStr]?.meta?.status === "submitted"}
+              onChange={(next) => saveLesson({ parts: { ...store[dateStr].parts, part4: next } })}
             />
             <PartFeedbackInline
               label="Part 4"
-              value={currentLesson.feedback?.part4 || ""}
+              value={store[dateStr].feedback?.part4 || ""}
               canEdit={mode === "trainer"}
-              onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, part4: v } })}
+              onSave={(v) => saveLesson({ feedback: { ...store[dateStr].feedback, part4: v } })}
             />
 
-            {/* Overall */}
             <PartFeedbackInline
               label="総評"
-              value={currentLesson.feedback?.overall || ""}
+              value={store[dateStr].feedback?.overall || ""}
               canEdit={mode === "trainer"}
-              onSave={(v) => saveLesson({ feedback: { ...currentLesson.feedback, overall: v } })}
+              onSave={(v) => saveLesson({ feedback: { ...store[dateStr].feedback, overall: v } })}
             />
 
-            {/* 下部アクション（見た目/文言は不変更） */}
             <BottomActions
               mode={mode}
-              lesson={currentLesson}
+              lesson={store[dateStr]}
               onSubmit={handleSubmit}
               onReopen={() => setStatus("draft")}
               onReturn={handleReturn}
@@ -546,7 +493,7 @@ export default function Page() {
         )}
       </div>
 
-      {/* PINモーダル（既存） */}
+      {/* PINモーダル（既存のまま） */}
       <Dialog open={pinModalOpen} onOpenChange={(o) => { setPinModalOpen(o); if (!o) setPinError(""); }}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
@@ -638,7 +585,7 @@ export default function Page() {
   );
 }
 
-/* ========= UI Blocks（既存のまま） ========= */
+/* ========= 以下のUIブロックはあなたのまま（無改造） ========= */
 
 function EmptyState({ themeLabel }: { themeLabel: string }) {
   return (
@@ -679,19 +626,9 @@ function LessonMetaBar({ currentLesson }: { currentLesson: any; }) {
   );
 }
 
-function DayThemeEditor({
-  value,
-  editable,
-  onChange,
-  weekdayLabel,
-}: {
-  value: string;
-  editable: boolean;
-  onChange: (v: string) => void;
-  weekdayLabel: string;
-}) {
+function DayThemeEditor({ value, editable, onChange, weekdayLabel }: { value: string; editable: boolean; onChange: (v: string) => void; weekdayLabel: string; }) {
   return (
-    <div className="rounded-2xl border bg-white">
+    <div className="rounded-2xl border bg白">
       <div className="p-4 border-b">
         <h3 className="text-lg font-semibold">今日のテーマ</h3>
       </div>
@@ -725,7 +662,7 @@ function SectionPart1({ data, onChange, disabled, editMode }: { data: any; onCha
     onChange(next);
   }
   return (
-    <div className="rounded-2xl border bg-white">
+    <div className="rounded-2xl border bg白">
       <div className="p-4 border-b">
         <h3 className="text-lg font-semibold">{data.title}</h3>
       </div>
@@ -796,7 +733,7 @@ function SectionPart2({ data, onChange, disabled, editMode }: { data: any; onCha
     onChange(next);
   }
   return (
-    <div className="rounded-2xl border bg-white">
+    <div className="rounded-2xl border bg白">
       <div className="p-4 border-b">
         <h3 className="text-lg font-semibold">{data.title}</h3>
       </div>
@@ -889,7 +826,7 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
     onChange(next);
   }
   return (
-    <div className="rounded-2xl border bg-white">
+    <div className="rounded-2xl border bg白">
       <div className="p-4 border-b">
         <h3 className="text-lg font-semibold">{data.title}</h3>
       </div>
@@ -954,7 +891,7 @@ function SectionPart3({ data, onChange, disabled, editMode }: { data: any; onCha
 
 function SectionPart4({ data, onChange, disabled }: { data: any; onChange: (d: any) => void; disabled?: boolean }) {
   return (
-    <div className="rounded-2xl border bg-white">
+    <div className="rounded-2xl border bg白">
       <div className="p-4 border-b">
         <h3 className="text-lg font-semibold">{data.title}</h3>
       </div>
