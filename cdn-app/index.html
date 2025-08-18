@@ -13,12 +13,14 @@
 <body>
   <div id="root" class="container"></div>
 
-  <!-- 1) React/DOM をグローバル(window)へ -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <!-- 2) JSXをその場変換（Babel Standalone） -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- 3) あなたのアプリ本体（JSXのまま読み込む！type="text/babel"） -->
-  <script type="text/babel" data-presets="env,react" src="./app.jsx"></script>
-</body>
+      <!-- React UMD -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+    <!-- Babelは不要なので削除 -->
+    <!-- <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script> -->
+
+    <!-- JSXではないので普通のscriptとして読み込む -->
+    <script src="./app.jsx"></script>
+  </body>
 </html>
