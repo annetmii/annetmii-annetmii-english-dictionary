@@ -1,7 +1,2 @@
-[build]
-  command = ""                     # ビルドなし
-  publish = "cdn-app"              # ここを公開
-
 [functions]
-  directory = "cdn-app/netlify/functions"
-  node_bundler = "esbuild"
+  directory = "netlify/functions"
