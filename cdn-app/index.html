@@ -6,9 +6,79 @@
   <title>English Dictionary</title>
   <link rel="stylesheet" href="https://unpkg.com/modern-css-reset/dist/reset.min.css">
   <style>
-    body { font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial; background:#fff; color:#111; }
-    .container { max-width: 860px; margin: 0 auto; padding: 16px; }
-  </style>
+  /* ===== Base ===== */
+  :root{
+    --bg:#fafafa;
+    --card:#fff;
+    --text:#111827;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --brand:#111;            /* ボタンの黒 */
+    --brand-contrast:#fff;   /* ボタン文字の白 */
+    --radius:16px;
+    --shadow:0 6px 20px rgba(0,0,0,.06);
+    --gap:12px;
+  }
+  html,body{height:100%}
+  body{
+    font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;
+    background:var(--bg); color:var(--text);
+    -webkit-font-smoothing:antialiased; margin:0;
+  }
+  .container{max-width: 960px; margin:0 auto; padding:16px 12px 28px;}
+
+  /* ===== Cards / Sections ===== */
+  .card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:16px 16px; margin:12px 0;
+  }
+  h2{font-size:18px; margin:0 0 10px; letter-spacing:.01em}
+
+  /* ===== Layout helpers ===== */
+  .row{display:flex; gap:var(--gap); flex-wrap:wrap; align-items:center}
+  .row > *{flex:1 1 240px}
+  .row > .btn{flex:0 0 auto}
+
+  /* ===== Inputs ===== */
+  .input,.textarea{
+    width:100%; box-sizing:border-box;
+    border:1px solid var(--line); border-radius:12px;
+    background:#fff; color:var(--text);
+    padding:10px 12px; font-size:15px; line-height:1.5;
+    outline:none;
+  }
+  .input:focus,.textarea:focus{border-color:#9ca3af; box-shadow:0 0 0 3px rgba(156,163,175,.2)}
+  .textarea{min-height:110px; resize:vertical}
+  .label{font-size:12px; color:var(--muted); margin:0 0 4px 2px; display:block}
+
+  /* ===== Buttons ===== */
+  .btn{
+    appearance:none; border:1px solid var(--brand);
+    background:var(--brand); color:var(--brand-contrast);
+    padding:10px 14px; font-weight:600; border-radius:999px;
+    cursor:pointer; transition:transform .02s ease, opacity .15s ease;
+  }
+  .btn:hover{opacity:.92}
+  .btn:active{transform:translateY(1px)}
+  .btn[disabled]{opacity:.5; cursor:not-allowed}
+
+  /* ===== Small text ===== */
+  .hint{color:var(--muted); font-size:12px; margin:8px 2px}
+
+  /* ===== Header tweaks ===== */
+  .header-side{display:flex; align-items:center; gap:12px}
+  .switch-wrap{display:inline-flex; align-items:center; gap:6px; cursor:pointer}
+
+  /* ===== Mobile niceties ===== */
+  @media (max-width: 520px){
+    .container{padding:12px 10px 24px}
+    .card{padding:14px 14px}
+    .row{gap:10px}
+    .textarea{min-height:90px}
+  }
+</style>
+
 </head>
 <body>
   <div id="root" class="container"></div>
