@@ -1,16 +1,39 @@
 "use client";
 import * as React from "react";
-export function Dialog({ open, onOpenChange, children }: { open:boolean; onOpenChange:(v:boolean)=>void; children: React.ReactNode }) {
-  React.useEffect(()=>{ function onKey(e:KeyboardEvent){ if(e.key==="Escape") onOpenChange(false);} window.addEventListener("keydown", onKey); return ()=>window.removeEventListener("keydown", onKey); },[onOpenChange]);
-  return open ? <div className="fixed inset-0 z-50 flex items-center justify-center">
-    <div className="absolute inset-0 bg-black/30" onClick={()=>onOpenChange(false)} />
-    {children}
-  </div> : null;
+
+type DialogProps = {
+  open: boolean;
+  onOpenChange?: (o: boolean) => void;
+  children: React.ReactNode;
+  className?: string;
+};
+export function Dialog({ open, onOpenChange, children }: DialogProps) {
+  if (!open) return null;
+  return (
+    <div
+      onClick={() => onOpenChange?.(false)}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    >
+      <div onClick={(e) => e.stopPropagation()}>{children}</div>
+    </div>
+  );
 }
-export function DialogContent({ className, children }: any) {
-  return <div className={`relative z-10 w-[90%] max-w-md rounded-2xl bg-white border shadow ${className||""}`}>{children}</div>;
+
+export function DialogContent({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`w-[92vw] max-w-md rounded-2xl bg-white p-4 shadow-xl ${className}`}>{children}</div>;
 }
-export function DialogHeader({ children }: any) { return <div className="p-4 border-b">{children}</div>; }
-export function DialogFooter({ className, children }: any) { return <div className={`p-4 flex justify-end gap-2 ${className||""}`}>{children}</div>; }
-export function DialogTitle({ children }: any) { return <h3 className="font-semibold text-lg">{children}</h3>; }
-export function DialogDescription({ children }: any) { return <p className="text-sm text-gray-600 mt-1">{children}</p>; }
+
+export function DialogHeader({ children }: { children: React.ReactNode }) {
+  return <div className="mb-2">{children}</div>;
+}
+export function DialogFooter({ children }: { children: React.ReactNode }) {
+  return <div className="mt-3 flex justify-end gap-2">{children}</div>;
+}
+export function DialogTitle({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-lg font-semibold">{children}</h3>;
+}
+export function DialogDescription({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm text-gray-600">{children}</p>;
+}
+
+export default Dialog;
